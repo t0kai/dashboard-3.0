@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 dark:bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DV360 Performance & Cost Analytics Dashboard</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for data tables */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(100, 116, 139, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(100, 116, 139, 0.5);
+        }
+        .comparison-winner {
+            box-shadow: 0 0 0 2px #10b981;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
+
+    <div class="min-h-full flex flex-col">
+        <!-- Top Navigation -->
+        <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-brand-600 text-white rounded-lg shadow-sm">
+                            <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">DV360 Analytics Hub</h1>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Media Cost (Revenue), CPM & CPC Trend Engine</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <!-- Live Google Sheet Status Indicator -->
+                        <div id="sheetSyncStatus" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i>
+                            <span>Connecting Sheet...</span>
+                        </div>
+
+                        <!-- Data Source Switcher Button -->
+                        <button onclick="openImportModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
+                            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                            <span>Import CSV / Sheet</span>
+                        </button>
+
+                        <!-- Currency Symbol Badge (AUD Fixed) -->
+                        <div class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                            <span class="text-slate-400 font-normal">Currency:</span>
+                            <span>AUD (A$)</span>
+                        </div>
+
+                        <!-- Dark Mode Toggle -->
+                        <button id="themeToggle" onclick="toggleDarkMode()" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i data-lucide="moon" id="themeIcon" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            
+            <!-- Global Controls & Filters -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="filter" class="w-4 h-4 text-brand-600"></i>
+                        <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-200">Global Dashboard Filters</h2>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="resetFilters()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+                            <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset Filters
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Advertiser Filter -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Advertiser</label>
+                        <select id="filterAdvertiser" onchange="handleFilterChange()" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Advertisers</option>
+                        </select>
+                    </div>
+
+                    <!-- Year Filter -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Year</label>
+                        <select id="filterYear" onchange="handleFilterChange()" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Years</option>
+                        </select>
+                    </div>
+
+                    <!-- Month Filter -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Month</label>
+                        <select id="filterMonth" onchange="handleFilterChange()" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
+                            <option value="ALL">All Months</option>
+                        </select>
+                    </div>
+
+                    <!-- Metric Focus Selector for Trend -->
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Chart Metric Primary Focus</label>
+                        <select id="chartMetricFocus" onchange="updateTrendChart()" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
+                            <option value="both">Both eCPM & eCPC</option>
+                            <option value="ecpm">eCPM Only</option>
+                            <option value="ecpc">eCPC Only</option>
+                            <option value="revenue">Spend / Revenue Only</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Metric KPI Overview -->
+            <section class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Spend (Revenue)</p>
+                    <p id="kpiRevenue" class="text-lg font-bold text-slate-900 dark:text-white mt-1">$0</p>
+                    <span class="text-[10px] text-slate-400">Media Cost in DV360</span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Impressions</p>
+                    <p id="kpiImpressions" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0</p>
+                    <span class="text-[10px] text-slate-400">Delivered Volume</span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Clicks</p>
+                    <p id="kpiClicks" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0</p>
+                    <span class="text-[10px] text-slate-400">User Engagements</span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-white to-blue-50/50 dark:from-slate-800 dark:to-slate-800/80">
+                    <p class="text-xs text-brand-600 dark:text-brand-400 font-medium">Avg eCPM</p>
+                    <p id="kpiCPM" class="text-lg font-bold text-brand-700 dark:text-brand-300 mt-1">$0.00</p>
+                    <span class="text-[10px] text-slate-400">Cost Per 1K Impressions</span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-white to-emerald-50/50 dark:from-slate-800 dark:to-slate-800/80">
+                    <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Avg eCPC</p>
+                    <p id="kpiCPC" class="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-1">$0.00</p>
+                    <span class="text-[10px] text-slate-400">Effective Cost Per Click</span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Avg CTR</p>
+                    <p id="kpiCTR" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0.00%</p>
+                    <span class="text-[10px] text-slate-400">Click-Through Rate</span>
+                </div>
+            </section>
+
+            <!-- Main Trend Analysis Chart -->
+            <section class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="line-chart" class="w-5 h-5 text-brand-600"></i>
+                            CPM & CPC Inflation / Time Trend
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Historical view tracking cost efficiency changes over time</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300" id="dataPointsCount">
+                            0 Months Data
+                        </span>
+                    </div>
+                </div>
+
+                <div class="relative w-full h-80 sm:h-96">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Peak Highlights & Insights Section -->
+            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Highest CPM Alert -->
+                <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-4 rounded-xl flex items-start gap-3">
+                    <div class="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg">
+                        <i data-lucide="trending-up" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase tracking-wide">Highest eCPM Month</span>
+                        <p id="peakCPMText" class="text-base font-bold text-amber-900 dark:text-amber-100 mt-0.5">--</p>
+                        <p id="peakCPMSub" class="text-xs text-amber-700 dark:text-amber-400/80 mt-1">No data available</p>
+                    </div>
+                </div>
+
+                <!-- Highest CPC Alert -->
+                <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 p-4 rounded-xl flex items-start gap-3">
+                    <div class="p-2 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg">
+                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-rose-800 dark:text-rose-300 uppercase tracking-wide">Highest eCPC Month</span>
+                        <p id="peakCPCText" class="text-base font-bold text-rose-900 dark:text-rose-100 mt-0.5">--</p>
+                        <p id="peakCPCSub" class="text-xs text-rose-700 dark:text-rose-400/80 mt-1">No data available</p>
+                    </div>
+                </div>
+
+                <!-- Best Value / Lowest CPM Alert -->
+                <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 p-4 rounded-xl flex items-start gap-3">
+                    <div class="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <i data-lucide="zap" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">Most Efficient eCPM</span>
+                        <p id="lowestCPMText" class="text-base font-bold text-emerald-900 dark:text-emerald-100 mt-0.5">--</p>
+                        <p id="lowestCPMSub" class="text-xs text-emerald-700 dark:text-emerald-400/80 mt-1">No data available</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- GSMArena Style Period Comparison Module -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+                <div class="border-b border-slate-200 dark:border-slate-700 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="columns-2" class="w-5 h-5 text-brand-600"></i>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Period-over-Period Side-by-Side Comparison</h3>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Compare any specific month against another to measure CPM/CPC variance and ROI shifts (GSMArena style)</p>
+                </div>
+
+                <!-- Selectors Bar for Comparison -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200/80 dark:border-slate-700/60">
+                    <!-- Period A Controls -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Period A (Baseline)
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400">Advertiser</label>
+                                <select id="compAdvA" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400">Year</label>
+                                <select id="compYearA" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400">Month</label>
+                                <select id="compMonthA" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Period B Controls -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> Period B (Comparison Target)
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400">Advertiser</label>
+                                <select id="compAdvB" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400">Year</label>
+                                <select id="compYearB" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400">Month</label>
+                                <select id="compMonthB" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comparison Cards Display -->
+                <div id="comparisonGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Comparison Card A -->
+                    <div id="cardPeriodA" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3 shadow-sm transition">
+                        <div class="border-b border-slate-100 dark:border-slate-700 pb-2 flex justify-between items-center">
+                            <h4 id="compTitleA" class="font-bold text-sm text-slate-800 dark:text-slate-100">--</h4>
+                            <span class="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">Baseline</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Revenue (Spend):</span>
+                                <span id="compRevA" class="font-semibold">--</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Impressions:</span>
+                                <span id="compImpA" class="font-semibold">--</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Clicks:</span>
+                                <span id="compClickA" class="font-semibold">--</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">eCPM:</span>
+                                <span id="compCpmA" class="font-semibold text-brand-600 dark:text-brand-400">--</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">eCPC:</span>
+                                <span id="compCpcA" class="font-semibold text-emerald-600 dark:text-emerald-400">--</span>
+                            </div>
+                            <div class="flex justify-between py-1">
+                                <span class="text-slate-500">CTR:</span>
+                                <span id="compCtrA" class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Card B -->
+                    <div id="cardPeriodB" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 space-y-3 shadow-sm transition">
+                        <div class="border-b border-slate-100 dark:border-slate-700 pb-2 flex justify-between items-center">
+                            <h4 id="compTitleB" class="font-bold text-sm text-slate-800 dark:text-slate-100">--</h4>
+                            <span class="text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-medium">Target</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Revenue (Spend):</span>
+                                <div class="text-right">
+                                    <span id="compRevB" class="font-semibold">--</span>
+                                    <span id="diffRev" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Impressions:</span>
+                                <div class="text-right">
+                                    <span id="compImpB" class="font-semibold">--</span>
+                                    <span id="diffImp" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">Clicks:</span>
+                                <div class="text-right">
+                                    <span id="compClickB" class="font-semibold">--</span>
+                                    <span id="diffClick" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">eCPM:</span>
+                                <div class="text-right">
+                                    <span id="compCpmB" class="font-semibold text-brand-600 dark:text-brand-400">--</span>
+                                    <span id="diffCpm" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50 dark:border-slate-800">
+                                <span class="text-slate-500">eCPC:</span>
+                                <div class="text-right">
+                                    <span id="compCpcB" class="font-semibold text-emerald-600 dark:text-emerald-400">--</span>
+                                    <span id="diffCpc" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between py-1">
+                                <span class="text-slate-500">CTR:</span>
+                                <div class="text-right">
+                                    <span id="compCtrB" class="font-semibold">--</span>
+                                    <span id="diffCtr" class="block text-[10px]"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Data Table Section -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden space-y-4 p-5">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="table" class="w-5 h-5 text-brand-600"></i>
+                            DV360 Detailed Campaign Log
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Filtered data breakdown by Advertiser, Month, and Year</p>
+                    </div>
+
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <!-- Search input -->
+                        <div class="relative w-full sm:w-64">
+                            <input type="text" id="tableSearch" onkeyup="renderTable()" placeholder="Search advertiser..." class="w-full text-xs pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-200">
+                            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5"></i>
+                        </div>
+                        <!-- Export CSV Button -->
+                        <button onclick="exportToCSV()" class="inline-flex items-center gap-1 text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium rounded-lg transition whitespace-nowrap">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                    <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+                        <thead class="text-[11px] uppercase bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('advertiser')">Advertiser <span id="sort_advertiser"></span></th>
+                                <th scope="col" class="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('year')">Year <span id="sort_year"></span></th>
+                                <th scope="col" class="px-4 py-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('month')">Month <span id="sort_month"></span></th>
+                                <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('impressions')">Impressions <span id="sort_impressions"></span></th>
+                                <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('clicks')">Clicks <span id="sort_clicks"></span></th>
+                                <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('revenue')">Revenue (Spend) <span id="sort_revenue"></span></th>
+                                <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('ecpm')">eCPM <span id="sort_ecpm"></span></th>
+                                <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('ecpc')">eCPC <span id="sort_ecpc"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-700/60">
+                            <!-- JS dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table Pagination -->
+                <div class="flex items-center justify-between text-xs text-slate-500 pt-2">
+                    <span id="paginationInfo">Showing 0 of 0 entries</span>
+                    <div class="flex items-center space-x-2">
+                        <button id="btnPrevPage" onclick="changePage(-1)" class="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 disabled:opacity-40">Previous</button>
+                        <span id="currentPageNum" class="font-medium text-slate-700 dark:text-slate-300">1</span>
+                        <button id="btnNextPage" onclick="changePage(1)" class="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 disabled:opacity-40">Next</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-lg w-full shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+                    <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-brand-600"></i> Import DV360 CSV Report
+                    </h3>
+                    <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Upload your DV360 report CSV file or paste raw content. The CSV should contain headers matching:
+                    <br><code class="text-[10px] bg-slate-100 dark:bg-slate-900 p-1 rounded text-brand-600 dark:text-brand-400 block mt-1">Advertiser, Year, Month, Partner Currency, Impressions, Clicks, Revenue (Partner Currency), Revenue eCPM (Partner Currency), Revenue eCPC (Partner Currency)</code>
+                </p>
+
+                <!-- File drop zone -->
+                <div class="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg p-6 text-center hover:border-brand-500 transition cursor-pointer" onclick="document.getElementById('csvFileInput').click()">
+                    <i data-lucide="upload-cloud" class="w-8 h-8 text-slate-400 mx-auto mb-2"></i>
+                    <p class="text-xs font-medium text-slate-700 dark:text-slate-300">Click to choose file or drag CSV here</p>
+                    <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)">
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                    <span class="flex-shrink mx-2 text-[10px] text-slate-400 uppercase">Or Paste Raw CSV</span>
+                    <div class="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                </div>
+
+                <textarea id="rawCsvText" rows="4" placeholder="Paste CSV text here..." class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2"></textarea>
+
+                <div class="flex items-center justify-end space-x-2 pt-2">
+                    <button onclick="closeImportModal()" class="px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Cancel</button>
+                    <button onclick="parseRawCsv()" class="px-4 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-medium shadow-sm">Load Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
+                DV360 Interactive Performance & Cost Dashboard &bull; Designed for Martech & Media Buying Professionals
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        /* =========================
+           DATA LAYER & SHEET URL
+        ========================= */
+        // Published Google Sheet CSV Endpoint
+        const LIVE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXf6QyGIcu8fPpN2cQa1VB8DklQS8K3erAhRikctucfshld_6Nn_5r5e6-ZUOvYiKY8gcAHhaSZLWI/pub?output=csv";
+
+        // Default currency symbol set to AUD
+        let currentCurrency = "A$";
+
+        // Initial Demo DV360 Dataset spanning Advertisers, Months, and Years
+        const demoDV360Data = [
+            // Advertiser Alpha - 2025
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "January", currency: "A$", impressions: 1250000, clicks: 8200, revenue: 6250.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "February", currency: "$", impressions: 1400000, clicks: 9500, revenue: 7280.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "March", currency: "$", impressions: 1650000, clicks: 11200, revenue: 8910.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "April", currency: "$", impressions: 1500000, clicks: 10100, revenue: 8250.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "May", currency: "$", impressions: 1800000, clicks: 12400, revenue: 10260.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "June", currency: "$", impressions: 1750000, clicks: 11800, revenue: 10150.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "July", currency: "$", impressions: 1900000, clicks: 13100, revenue: 11400.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "August", currency: "$", impressions: 2100000, clicks: 14200, revenue: 13020.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "September", currency: "$", impressions: 2300000, clicks: 15800, revenue: 14950.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "October", currency: "$", impressions: 2600000, clicks: 18100, revenue: 18200.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "November", currency: "$", impressions: 3200000, clicks: 23500, revenue: 26240.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "December", currency: "$", impressions: 3800000, clicks: 29000, revenue: 34200.00 },
+
+            // Advertiser Alpha - 2026
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "January", currency: "$", impressions: 1450000, clicks: 9800, revenue: 7975.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "February", currency: "$", impressions: 1550000, clicks: 10800, revenue: 8990.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "March", currency: "$", impressions: 1850000, clicks: 13200, revenue: 11100.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "April", currency: "$", impressions: 1700000, clicks: 11900, revenue: 10370.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "May", currency: "$", impressions: 2050000, clicks: 14800, revenue: 12915.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "June", currency: "$", impressions: 2100000, clicks: 15200, revenue: 13650.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "July", currency: "$", impressions: 2250000, clicks: 16100, revenue: 15075.00 },
+            { advertiser: "Acme Luxury Retail", year: 2026, month: "August", currency: "$", impressions: 2400000, clicks: 17500, revenue: 16800.00 },
+
+            // Advertiser Beta - 2025
+            { advertiser: "FinTech Global", year: 2025, month: "January", currency: "$", impressions: 800000, clicks: 12000, revenue: 9600.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "February", currency: "$", impressions: 850000, clicks: 13100, revenue: 10625.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "March", currency: "$", impressions: 950000, clicks: 14800, revenue: 12350.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "April", currency: "$", impressions: 900000, clicks: 13900, revenue: 11250.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "May", currency: "$", impressions: 1100000, clicks: 17200, revenue: 14850.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "June", currency: "$", impressions: 1050000, clicks: 16400, revenue: 13650.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "July", currency: "$", impressions: 1200000, clicks: 18900, revenue: 16200.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "August", currency: "$", impressions: 1300000, clicks: 20100, revenue: 18200.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "September", currency: "$", impressions: 1400000, clicks: 21500, revenue: 20300.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "October", currency: "$", impressions: 1600000, clicks: 24800, revenue: 24800.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "November", currency: "$", impressions: 2000000, clicks: 31000, revenue: 33000.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "December", currency: "$", impressions: 2200000, clicks: 34500, revenue: 38500.00 },
+
+            // Advertiser Beta - 2026
+            { advertiser: "FinTech Global", year: 2026, month: "January", currency: "$", impressions: 1000000, clicks: 15000, revenue: 13000.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "February", currency: "$", impressions: 1100000, clicks: 16800, revenue: 14850.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "March", currency: "$", impressions: 1250000, clicks: 19500, revenue: 17500.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "April", currency: "$", impressions: 1200000, clicks: 18200, revenue: 16200.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "May", currency: "$", impressions: 1400000, clicks: 21800, revenue: 19600.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "June", currency: "$", impressions: 1450000, clicks: 22400, revenue: 21025.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "July", currency: "$", impressions: 1550000, clicks: 23900, revenue: 23250.00 },
+            { advertiser: "FinTech Global", year: 2026, month: "August", currency: "$", impressions: 1600000, clicks: 24800, revenue: 24800.00 }
+        ];
+
+        // Active State Data
+        let rawData = [...demoDV360Data];
+        let filteredData = [];
+        let chartInstance = null;
+
+        // Table Pagination State
+        let currentPage = 1;
+        const pageSize = 8;
+        let sortColumn = 'year';
+        let sortAsc = false;
+
+        // Months Order map for consistent chronological sorting
+        const monthOrder = {
+            "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+            "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
+        };
+
+        /* =========================
+           CALCULATIONS & HELPERS
+        ========================= */
+        function calculateCPM(revenue, impressions) {
+            if (!impressions || impressions === 0) return 0;
+            return (revenue / impressions) * 1000;
+        }
+
+        function calculateCPC(revenue, clicks) {
+            if (!clicks || clicks === 0) return 0;
+            return revenue / clicks;
+        }
+
+        function calculateCTR(clicks, impressions) {
+            if (!impressions || impressions === 0) return 0;
+            return (clicks / impressions) * 100;
+        }
+
+        function formatCurrency(val) {
+            return currentCurrency + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatNumber(val) {
+            return Number(val).toLocaleString();
+        }
+
+        /* =========================
+           FILTERING ENGINE
+        ========================= */
+        function populateFilterDropdowns() {
+            const advSelect = document.getElementById('filterAdvertiser');
+            const yearSelect = document.getElementById('filterYear');
+            const monthSelect = document.getElementById('filterMonth');
+
+            const currentAdv = advSelect.value;
+            const currentYear = yearSelect.value;
+            const currentMonth = monthSelect.value;
+
+            // Extract unique values
+            const advertisers = [...new Set(rawData.map(d => d.advertiser))].sort();
+            const years = [...new Set(rawData.map(d => d.year))].sort((a,b) => b - a);
+            const months = [...new Set(rawData.map(d => d.month))].sort((a,b) => (monthOrder[a] || 0) - (monthOrder[b] || 0));
+
+            // Populate Advertisers
+            advSelect.innerHTML = '<option value="ALL">All Advertisers</option>' + 
+                advertisers.map(a => `<option value="${a}">${a}</option>`).join('');
+            advSelect.value = advertisers.includes(currentAdv) ? currentAdv : 'ALL';
+
+            // Populate Years
+            yearSelect.innerHTML = '<option value="ALL">All Years</option>' + 
+                years.map(y => `<option value="${y}">${y}</option>`).join('');
+            yearSelect.value = years.map(String).includes(currentYear) ? currentYear : 'ALL';
+
+            // Populate Months
+            monthSelect.innerHTML = '<option value="ALL">All Months</option>' + 
+                months.map(m => `<option value="${m}">${m}</option>`).join('');
+            monthSelect.value = months.includes(currentMonth) ? currentMonth : 'ALL';
+
+            // Populate Comparison Dropdowns as well
+            populateComparisonDropdowns(advertisers, years, months);
+        }
+
+        function applyFilters() {
+            const adv = document.getElementById('filterAdvertiser').value;
+            const yr = document.getElementById('filterYear').value;
+            const mth = document.getElementById('filterMonth').value;
+
+            filteredData = rawData.filter(item => {
+                const matchAdv = (adv === 'ALL' || item.advertiser === adv);
+                const matchYr = (yr === 'ALL' || String(item.year) === String(yr));
+                const matchMth = (mth === 'ALL' || item.month === mth);
+                return matchAdv && matchYr && matchMth;
+            });
+
+            // Calculate derived eCPM, eCPC, CTR for each row
+            filteredData.forEach(row => {
+                row.ecpm = calculateCPM(row.revenue, row.impressions);
+                row.ecpc = calculateCPC(row.revenue, row.clicks);
+                row.ctr = calculateCTR(row.clicks, row.impressions);
+            });
+
+            updateKPIs();
+            updateTrendChart();
+            updatePeakHighlights();
+            renderTable();
+        }
+
+        function handleFilterChange() {
+            currentPage = 1;
+            applyFilters();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterAdvertiser').value = 'ALL';
+            document.getElementById('filterYear').value = 'ALL';
+            document.getElementById('filterMonth').value = 'ALL';
+            document.getElementById('chartMetricFocus').value = 'both';
+            handleFilterChange();
+        }
+
+        /* =========================
+           KPI SUMMARY CARDS
+        ========================= */
+        function updateKPIs() {
+            const totalRev = filteredData.reduce((acc, curr) => acc + curr.revenue, 0);
+            const totalImp = filteredData.reduce((acc, curr) => acc + curr.impressions, 0);
+            const totalClicks = filteredData.reduce((acc, curr) => acc + curr.clicks, 0);
+
+            const avgCPM = calculateCPM(totalRev, totalImp);
+            const avgCPC = calculateCPC(totalRev, totalClicks);
+            const avgCTR = calculateCTR(totalClicks, totalImp);
+
+            document.getElementById('kpiRevenue').innerText = formatCurrency(totalRev);
+            document.getElementById('kpiImpressions').innerText = formatNumber(totalImp);
+            document.getElementById('kpiClicks').innerText = formatNumber(totalClicks);
+            document.getElementById('kpiCPM').innerText = formatCurrency(avgCPM);
+            document.getElementById('kpiCPC').innerText = formatCurrency(avgCPC);
+            document.getElementById('kpiCTR').innerText = avgCTR.toFixed(2) + '%';
+        }
+
+        /* =========================
+           CHARTS ENGINE
+        ========================= */
+        function updateTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            const focus = document.getElementById('chartMetricFocus').value;
+
+            // Group data by Year-Month chronologically
+            const grouped = {};
+            
+            filteredData.forEach(d => {
+                const key = `${d.year} ${d.month}`;
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        year: d.year,
+                        month: d.month,
+                        impressions: 0,
+                        clicks: 0,
+                        revenue: 0
+                    };
+                }
+                grouped[key].impressions += d.impressions;
+                grouped[key].clicks += d.clicks;
+                grouped[key].revenue += d.revenue;
+            });
+
+            // Sort chronologically
+            const sortedKeys = Object.keys(grouped).sort((a, b) => {
+                const [yA, mA] = a.split(' ');
+                const [yB, mB] = b.split(' ');
+                if (yA !== yB) return Number(yA) - Number(yB);
+                return (monthOrder[mA] || 0) - (monthOrder[mB] || 0);
+            });
+
+            document.getElementById('dataPointsCount').innerText = `${sortedKeys.length} Time Periods`;
+
+            const labels = sortedKeys;
+            const ecpmData = sortedKeys.map(k => calculateCPM(grouped[k].revenue, grouped[k].impressions));
+            const ecpcData = sortedKeys.map(k => calculateCPC(grouped[k].revenue, grouped[k].clicks));
+            const revData = sortedKeys.map(k => grouped[k].revenue);
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const datasets = [];
+
+            if (focus === 'both' || focus === 'ecpm') {
+                datasets.push({
+                    label: `eCPM (${currentCurrency})`,
+                    data: ecpmData,
+                    borderColor: '#0284c7',
+                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y'
+                });
+            }
+
+            if (focus === 'both' || focus === 'ecpc') {
+                datasets.push({
+                    label: `eCPC (${currentCurrency})`,
+                    data: ecpcData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    yAxisID: focus === 'both' ? 'y1' : 'y'
+                });
+            }
+
+            if (focus === 'revenue') {
+                datasets.push({
+                    label: `Spend / Revenue (${currentCurrency})`,
+                    data: revData,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                    yAxisID: 'y'
+                });
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: { family: 'Inter', size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${currentCurrency}${Number(context.raw).toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: `eCPM / Primary Value (${currentCurrency})` },
+                            ticks: {
+                                callback: value => currentCurrency + value
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: focus === 'both',
+                            position: 'right',
+                            title: { display: true, text: `eCPC (${currentCurrency})` },
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                callback: value => currentCurrency + value
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /* =========================
+           PEAK HIGHLIGHTS ENGINE
+        ========================= */
+        function updatePeakHighlights() {
+            if (filteredData.length === 0) {
+                document.getElementById('peakCPMText').innerText = '--';
+                document.getElementById('peakCPMSub').innerText = 'No data';
+                document.getElementById('peakCPCText').innerText = '--';
+                document.getElementById('peakCPCSub').innerText = 'No data';
+                document.getElementById('lowestCPMText').innerText = '--';
+                document.getElementById('lowestCPMSub').innerText = 'No data';
+                return;
+            }
+
+            // Group by Month/Year aggregate to find peaks
+            const agg = {};
+            filteredData.forEach(d => {
+                const key = `${d.month} ${d.year}`;
+                if (!agg[key]) {
+                    agg[key] = { key, month: d.month, year: d.year, impressions: 0, clicks: 0, revenue: 0, advertiser: d.advertiser };
+                }
+                agg[key].impressions += d.impressions;
+                agg[key].clicks += d.clicks;
+                agg[key].revenue += d.revenue;
+            });
+
+            const list = Object.values(agg).map(item => ({
+                ...item,
+                ecpm: calculateCPM(item.revenue, item.impressions),
+                ecpc: calculateCPC(item.revenue, item.clicks)
+            }));
+
+            // Peak eCPM
+            list.sort((a,b) => b.ecpm - a.ecpm);
+            const highestCPM = list[0];
+            document.getElementById('peakCPMText').innerText = `${highestCPM.month} ${highestCPM.year}`;
+            document.getElementById('peakCPMSub').innerText = `Peak eCPM: ${formatCurrency(highestCPM.ecpm)}`;
+
+            // Peak eCPC
+            list.sort((a,b) => b.ecpc - a.ecpc);
+            const highestCPC = list[0];
+            document.getElementById('peakCPCText').innerText = `${highestCPC.month} ${highestCPC.year}`;
+            document.getElementById('peakCPCSub').innerText = `Peak eCPC: ${formatCurrency(highestCPC.ecpc)}`;
+
+            // Lowest eCPM (Best value)
+            list.sort((a,b) => a.ecpm - b.ecpm);
+            const lowestCPM = list[0];
+            document.getElementById('lowestCPMText').innerText = `${lowestCPM.month} ${lowestCPM.year}`;
+            document.getElementById('lowestCPMSub').innerText = `Lowest eCPM: ${formatCurrency(lowestCPM.ecpm)}`;
+        }
+
+        /* =========================
+           SIDE-BY-SIDE COMPARISON
+        ========================= */
+        function populateComparisonDropdowns(advertisers, years, months) {
+            const selects = ['compAdvA', 'compAdvB', 'compYearA', 'compYearB', 'compMonthA', 'compMonthB'];
+            
+            // Advertisers Options
+            const advOpts = '<option value="ALL">All Advertisers</option>' + advertisers.map(a => `<option value="${a}">${a}</option>`).join('');
+            document.getElementById('compAdvA').innerHTML = advOpts;
+            document.getElementById('compAdvB').innerHTML = advOpts;
+
+            // Years Options
+            const yrOpts = years.map(y => `<option value="${y}">${y}</option>`).join('');
+            document.getElementById('compYearA').innerHTML = yrOpts;
+            document.getElementById('compYearB').innerHTML = yrOpts;
+
+            // Months Options
+            const mthOpts = months.map(m => `<option value="${m}">${m}</option>`).join('');
+            document.getElementById('compMonthA').innerHTML = mthOpts;
+            document.getElementById('compMonthB').innerHTML = mthOpts;
+
+            // Set sensible defaults if available
+            if (years.length >= 2) {
+                document.getElementById('compYearA').value = years[1];
+                document.getElementById('compYearB').value = years[0];
+            }
+            if (months.length > 0) {
+                document.getElementById('compMonthA').value = months[0];
+                document.getElementById('compMonthB').value = months[0];
+            }
+
+            runComparison();
+        }
+
+        function getAggregateForSelection(adv, year, month) {
+            const matches = rawData.filter(d => {
+                const matchAdv = (adv === 'ALL' || d.advertiser === adv);
+                const matchYr = String(d.year) === String(year);
+                const matchMth = d.month === month;
+                return matchAdv && matchYr && matchMth;
+            });
+
+            const totalRev = matches.reduce((acc, c) => acc + c.revenue, 0);
+            const totalImp = matches.reduce((acc, c) => acc + c.impressions, 0);
+            const totalClicks = matches.reduce((acc, c) => acc + c.clicks, 0);
+
+            return {
+                adv: adv === 'ALL' ? 'All Advertisers' : adv,
+                year,
+                month,
+                revenue: totalRev,
+                impressions: totalImp,
+                clicks: totalClicks,
+                ecpm: calculateCPM(totalRev, totalImp),
+                ecpc: calculateCPC(totalRev, totalClicks),
+                ctr: calculateCTR(totalClicks, totalImp)
+            };
+        }
+
+        function runComparison() {
+            const advA = document.getElementById('compAdvA').value;
+            const yrA = document.getElementById('compYearA').value;
+            const mthA = document.getElementById('compMonthA').value;
+
+            const advB = document.getElementById('compAdvB').value;
+            const yrB = document.getElementById('compYearB').value;
+            const mthB = document.getElementById('compMonthB').value;
+
+            const dataA = getAggregateForSelection(advA, yrA, mthA);
+            const dataB = getAggregateForSelection(advB, yrB, mthB);
+
+            // Populate Card A
+            document.getElementById('compTitleA').innerText = `${dataA.month} ${dataA.year} (${dataA.adv})`;
+            document.getElementById('compRevA').innerText = formatCurrency(dataA.revenue);
+            document.getElementById('compImpA').innerText = formatNumber(dataA.impressions);
+            document.getElementById('compClickA').innerText = formatNumber(dataA.clicks);
+            document.getElementById('compCpmA').innerText = formatCurrency(dataA.ecpm);
+            document.getElementById('compCpcA').innerText = formatCurrency(dataA.ecpc);
+            document.getElementById('compCtrA').innerText = dataA.ctr.toFixed(2) + '%';
+
+            // Populate Card B
+            document.getElementById('compTitleB').innerText = `${dataB.month} ${dataB.year} (${dataB.adv})`;
+            document.getElementById('compRevB').innerText = formatCurrency(dataB.revenue);
+            document.getElementById('compImpB').innerText = formatNumber(dataB.impressions);
+            document.getElementById('compClickB').innerText = formatNumber(dataB.clicks);
+            document.getElementById('compCpmB').innerText = formatCurrency(dataB.ecpm);
+            document.getElementById('compCpcB').innerText = formatCurrency(dataB.ecpc);
+            document.getElementById('compCtrB').innerText = dataB.ctr.toFixed(2) + '%';
+
+            // Render Deltas on B vs A
+            renderDelta('diffRev', dataA.revenue, dataB.revenue, 'currency', false);
+            renderDelta('diffImp', dataA.impressions, dataB.impressions, 'number', false);
+            renderDelta('diffClick', dataA.clicks, dataB.clicks, 'number', false);
+            // Lower CPM & CPC is better (lowerCostIsBetter = true)
+            renderDelta('diffCpm', dataA.ecpm, dataB.ecpm, 'currency', true);
+            renderDelta('diffCpc', dataA.ecpc, dataB.ecpc, 'currency', true);
+            renderDelta('diffCtr', dataA.ctr, dataB.ctr, 'percent', false);
+        }
+
+        function renderDelta(elemId, valA, valB, type, lowerIsBetter) {
+            const elem = document.getElementById(elemId);
+            if (!elem) return;
+
+            if (valA === 0) {
+                elem.innerText = 'N/A';
+                elem.className = 'block text-[10px] text-slate-400';
+                return;
+            }
+
+            const diff = valB - valA;
+            const pct = (diff / valA) * 100;
+            const sign = diff >= 0 ? '+' : '';
+
+            let isPositiveOutcome = diff < 0 ? lowerIsBetter : !lowerIsBetter;
+            let colorClass = isPositiveOutcome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
+            if (Math.abs(pct) < 0.01) colorClass = 'text-slate-400';
+
+            let diffFormatted = '';
+            if (type === 'currency') diffFormatted = formatCurrency(diff);
+            else if (type === 'percent') diffFormatted = diff.toFixed(2) + '%';
+            else diffFormatted = formatNumber(diff);
+
+            elem.innerText = `${sign}${pct.toFixed(1)}% (${sign}${diffFormatted})`;
+            elem.className = `block text-[10px] font-semibold ${colorClass}`;
+        }
+
+        /* =========================
+           DATA TABLE & PAGINATION
+        ========================= */
+        function renderTable() {
+            const searchTerm = document.getElementById('tableSearch').value.toLowerCase();
+            
+            let displayData = filteredData.filter(d => 
+                d.advertiser.toLowerCase().includes(searchTerm) ||
+                String(d.year).includes(searchTerm) ||
+                d.month.toLowerCase().includes(searchTerm)
+            );
+
+            // Sorting logic
+            displayData.sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
+
+                if (sortColumn === 'month') {
+                    valA = monthOrder[a.month] || 0;
+                    valB = monthOrder[b.month] || 0;
+                }
+
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            // Update Sort Indicators in Table Header
+            ['advertiser', 'year', 'month', 'impressions', 'clicks', 'revenue', 'ecpm', 'ecpc'].forEach(col => {
+                const span = document.getElementById(`sort_${col}`);
+                if (span) {
+                    if (col === sortColumn) {
+                        span.innerText = sortAsc ? '▲' : '▼';
+                    } else {
+                        span.innerText = '';
+                    }
+                }
+            });
+
+            // Pagination calculation
+            const totalRecords = displayData.length;
+            const totalPages = Math.ceil(totalRecords / pageSize) || 1;
+
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * pageSize;
+            const paginatedRows = displayData.slice(startIndex, startIndex + pageSize);
+
+            const tbody = document.getElementById('tableBody');
+            if (paginatedRows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">No matching campaign logs found</td></tr>`;
+            } else {
+                tbody.innerHTML = paginatedRows.map(row => `
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                        <td class="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">${row.advertiser}</td>
+                        <td class="px-4 py-3">${row.year}</td>
+                        <td class="px-4 py-3">${row.month}</td>
+                        <td class="px-4 py-3 text-right font-mono">${formatNumber(row.impressions)}</td>
+                        <td class="px-4 py-3 text-right font-mono">${formatNumber(row.clicks)}</td>
+                        <td class="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">${formatCurrency(row.revenue)}</td>
+                        <td class="px-4 py-3 text-right font-semibold text-brand-600 dark:text-brand-400">${formatCurrency(row.ecpm)}</td>
+                        <td class="px-4 py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">${formatCurrency(row.ecpc)}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Pagination controls update
+            document.getElementById('paginationInfo').innerText = `Showing ${totalRecords > 0 ? startIndex + 1 : 0} to ${Math.min(startIndex + pageSize, totalRecords)} of ${totalRecords} entries`;
+            document.getElementById('currentPageNum').innerText = `${currentPage} / ${totalPages}`;
+            document.getElementById('btnPrevPage').disabled = currentPage === 1;
+            document.getElementById('btnNextPage').disabled = currentPage === totalPages;
+        }
+
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortAsc = !sortAsc;
+            } else {
+                sortColumn = column;
+                sortAsc = true;
+            }
+            renderTable();
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderTable();
+        }
+
+        /* =========================
+           CSV IMPORT & EXPORT
+        ========================= */
+        async function fetchLiveSheetData() {
+            const statusElem = document.getElementById('sheetSyncStatus');
+            if (statusElem) {
+                statusElem.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> <span>Fetching Sheet...</span>`;
+                if (window.lucide) lucide.createIcons();
+            }
+
+            try {
+                const response = await fetch(LIVE_SHEET_URL, { cache: "no-cache" });
+                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                
+                const csvText = await response.text();
+                const success = processCsvContent(csvText, true);
+
+                if (success && statusElem) {
+                    statusElem.className = "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300";
+                    statusElem.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>Live Sheet Connected</span>`;
+                }
+            } catch (err) {
+                console.warn("Live Google Sheet fetch failed or was blocked by CORS/network. Using fallback demo data.", err);
+                if (statusElem) {
+                    statusElem.className = "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300";
+                    statusElem.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> <span>Offline Demo Data</span>`;
+                }
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function parseCsvLine(lineText) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < lineText.length; i++) {
+                const char = lineText[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim().replace(/^"|"$/g, ''));
+            return result;
+        }
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.add('hidden');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                processCsvContent(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        function parseRawCsv() {
+            const content = document.getElementById('rawCsvText').value;
+            if (!content.trim()) {
+                alert("Please paste or select a CSV file first.");
+                return;
+            }
+            processCsvContent(content);
+        }
+
+        function processCsvContent(csvText, isSilent = false) {
+            try {
+                const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== '');
+                if (lines.length < 2) {
+                    if (!isSilent) alert("Invalid CSV: Must include headers and at least one data row.");
+                    return false;
+                }
+
+                const headers = parseCsvLine(lines[0]);
+                
+                // Column mapping lookup
+                const advIdx = headers.findIndex(h => /advertiser/i.test(h));
+                const yrIdx = headers.findIndex(h => /year/i.test(h));
+                const mthIdx = headers.findIndex(h => /month/i.test(h));
+                const impIdx = headers.findIndex(h => /impression/i.test(h));
+                const clickIdx = headers.findIndex(h => /click/i.test(h));
+                const revIdx = headers.findIndex(h => /revenue|spend|cost/i.test(h));
+
+                if (advIdx === -1 || yrIdx === -1 || mthIdx === -1) {
+                    if (!isSilent) alert("Missing critical headers. Please ensure your CSV contains 'Advertiser', 'Year', and 'Month'.");
+                    return false;
+                }
+
+                const parsedData = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = parseCsvLine(lines[i]);
+                    if (cols.length < 3) continue;
+
+                    const advertiser = cols[advIdx] || "Unknown";
+                    const year = parseInt(cols[yrIdx], 10) || 2025;
+                    const month = cols[mthIdx] || "January";
+                    
+                    // Sanitize numeric fields (remove currency signs, commas, spaces)
+                    const cleanNum = (str) => parseFloat(String(str || '0').replace(/[^0-9.-]+/g, '')) || 0;
+
+                    const impressions = cleanNum(cols[impIdx]);
+                    const clicks = cleanNum(cols[clickIdx]);
+                    const revenue = cleanNum(cols[revIdx]);
+                    const currency = "A$";
+
+                    parsedData.push({
+                        advertiser,
+                        year,
+                        month,
+                        currency,
+                        impressions,
+                        clicks,
+                        revenue
+                    });
+                }
+
+                if (parsedData.length > 0) {
+                    rawData = parsedData;
+                    populateFilterDropdowns();
+                    resetFilters();
+                    closeImportModal();
+                    return true;
+                } else {
+                    if (!isSilent) alert("No valid data rows could be parsed.");
+                    return false;
+                }
+
+            } catch (err) {
+                console.error(err);
+                if (!isSilent) alert("Error parsing CSV file. Please check format.");
+                return false;
+            }
+        }
+
+        function exportToCSV() {
+            if (filteredData.length === 0) {
+                alert("No data available to export.");
+                return;
+            }
+
+            const headers = ["Advertiser", "Year", "Month", "Partner Currency", "Impressions", "Clicks", "Revenue (Partner Currency)", "Revenue eCPM (Partner Currency)", "Revenue eCPC (Partner Currency)"];
+            
+            const rows = filteredData.map(d => [
+                `"${d.advertiser}"`,
+                d.year,
+                `"${d.month}"`,
+                `"${currentCurrency}"`,
+                d.impressions,
+                d.clicks,
+                d.revenue.toFixed(2),
+                d.ecpm.toFixed(2),
+                d.ecpc.toFixed(2)
+            ]);
+
+            const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `DV360_Report_Export_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        /* =========================
+           UI SETTINGS & INITIALIZATION
+        ========================= */
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const themeIcon = document.getElementById('themeIcon');
+            if (isDark) {
+                themeIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                themeIcon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+            updateTrendChart();
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+            populateFilterDropdowns();
+            applyFilters();
+            fetchLiveSheetData();
+        };
+    </script>
+</body>
+</html>
