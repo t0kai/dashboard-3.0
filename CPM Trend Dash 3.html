@@ -51,15 +51,11 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(100, 116, 139, 0.5);
         }
-        .comparison-winner {
-            box-shadow: 0 0 0 2px #10b981;
-        }
     </style>
 </head>
 <body class="h-full text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
 
     <div class="min-h-full flex flex-col">
-        <!-- Top Navigation -->
         <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -86,7 +82,7 @@
                             <span>Import CSV / Sheet</span>
                         </button>
 
-                        <!-- Currency Symbol Badge (Fixed to AUD) -->
+                        <!-- Currency Symbol Badge (Fixed AUD) -->
                         <div class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             <span class="text-slate-400 font-normal">Currency:</span>
                             <span>AUD (A$)</span>
@@ -103,7 +99,6 @@
 
         <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
             
-            <!-- Global Controls & Filters -->
             <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-3">
                     <div class="flex items-center gap-2">
@@ -155,7 +150,6 @@
                 </div>
             </section>
 
-            <!-- Top Metric KPI Overview -->
             <section class="grid grid-cols-2 lg:grid-cols-6 gap-4">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Spend (Revenue)</p>
@@ -194,7 +188,6 @@
                 </div>
             </section>
 
-            <!-- Main Trend Analysis Chart -->
             <section class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div>
@@ -216,7 +209,6 @@
                 </div>
             </section>
 
-            <!-- Peak Highlights & Insights Section -->
             <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- Highest CPM Alert -->
                 <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-4 rounded-xl flex items-start gap-3">
@@ -255,7 +247,6 @@
                 </div>
             </section>
 
-            <!-- GSMArena Style Period Comparison Module -->
             <section class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
                 <div class="border-b border-slate-200 dark:border-slate-700 pb-3">
                     <div class="flex items-center gap-2">
@@ -404,7 +395,6 @@
                 </div>
             </section>
 
-            <!-- Detailed Data Table Section -->
             <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden space-y-4 p-5">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
@@ -461,7 +451,6 @@
             </section>
         </main>
 
-        <!-- Import Modal -->
         <div id="importModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
             <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-lg w-full shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
@@ -500,7 +489,6 @@
             </div>
         </div>
 
-        <!-- Footer -->
         <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-4 mt-auto">
             <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
                 DV360 Interactive Performance & Cost Dashboard &bull; Designed for Martech & Media Buying Professionals
@@ -1280,10 +1268,3 @@
     </script>
 </body>
 </html>
-```eoc
-
-### Key Highlights & How to Ensure 100% Success on Vercel:
-
-1. **File Placement**: Ensure this file is saved as **`index.html`** in the **root folder** of your GitHub repository (`/index.html`), not inside a subfolder.
-2. **Framework Preset**: On Vercel, when creating or editing your project under **Settings > General**, set **Framework Preset** to **Other** (or **Static HTML**).
-3. **Automatic Live Data Sync**: When deployed, `index.html` will automatically ping your published Google Sheet URL (`https://docs.google.com/spreadsheets/d/e/2PACX-1vSXf6QyGIcu8fPpN2cQa1VB8DklQS8K3erAhRikctucfshld_6Nn_5r5e6-ZUOvYiKY8gcAHhaSZLWI/pub?output=csv`) on every page load and calculate CPMs/CPCs live in Australian Dollars (`A$`).
