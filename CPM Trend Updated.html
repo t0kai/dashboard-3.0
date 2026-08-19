@@ -86,7 +86,7 @@
                             <span>Import CSV / Sheet</span>
                         </button>
 
-                        <!-- Currency Symbol Badge (AUD Fixed) -->
+                        <!-- Currency Symbol Badge (Fixed to AUD) -->
                         <div class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             <span class="text-slate-400 font-normal">Currency:</span>
                             <span>AUD (A$)</span>
@@ -144,7 +144,7 @@
 
                     <!-- Metric Focus Selector for Trend -->
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Chart Metric Primary Focus</label>
+                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Chart Metric Focus</label>
                         <select id="chartMetricFocus" onchange="updateTrendChart()" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-brand-500">
                             <option value="both">Both eCPM & eCPC</option>
                             <option value="ecpm">eCPM Only</option>
@@ -159,7 +159,7 @@
             <section class="grid grid-cols-2 lg:grid-cols-6 gap-4">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Spend (Revenue)</p>
-                    <p id="kpiRevenue" class="text-lg font-bold text-slate-900 dark:text-white mt-1">$0</p>
+                    <p id="kpiRevenue" class="text-lg font-bold text-slate-900 dark:text-white mt-1">A$0.00</p>
                     <span class="text-[10px] text-slate-400">Media Cost in DV360</span>
                 </div>
 
@@ -177,13 +177,13 @@
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-white to-blue-50/50 dark:from-slate-800 dark:to-slate-800/80">
                     <p class="text-xs text-brand-600 dark:text-brand-400 font-medium">Avg eCPM</p>
-                    <p id="kpiCPM" class="text-lg font-bold text-brand-700 dark:text-brand-300 mt-1">$0.00</p>
+                    <p id="kpiCPM" class="text-lg font-bold text-brand-700 dark:text-brand-300 mt-1">A$0.00</p>
                     <span class="text-[10px] text-slate-400">Cost Per 1K Impressions</span>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-gradient-to-br from-white to-emerald-50/50 dark:from-slate-800 dark:to-slate-800/80">
                     <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Avg eCPC</p>
-                    <p id="kpiCPC" class="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-1">$0.00</p>
+                    <p id="kpiCPC" class="text-lg font-bold text-emerald-700 dark:text-emerald-300 mt-1">A$0.00</p>
                     <span class="text-[10px] text-slate-400">Effective Cost Per Click</span>
                 </div>
 
@@ -202,7 +202,7 @@
                             <i data-lucide="line-chart" class="w-5 h-5 text-brand-600"></i>
                             CPM & CPC Inflation / Time Trend
                         </h3>
-                        <p class="text-xs text-slate-500 dark:text-slate-400">Historical view tracking cost efficiency changes over time</p>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Historical view tracking cost efficiency changes over time (AUD)</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300" id="dataPointsCount">
@@ -515,58 +515,30 @@
         // Published Google Sheet CSV Endpoint
         const LIVE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSXf6QyGIcu8fPpN2cQa1VB8DklQS8K3erAhRikctucfshld_6Nn_5r5e6-ZUOvYiKY8gcAHhaSZLWI/pub?output=csv";
 
-        // Default currency symbol set to AUD
-        let currentCurrency = "A$";
+        // Default currency symbol fixed to AUD
+        const currentCurrency = "A$";
 
-        // Initial Demo DV360 Dataset spanning Advertisers, Months, and Years
+        // Initial Fallback DV360 Dataset spanning Advertisers, Months, and Years
         const demoDV360Data = [
-            // Advertiser Alpha - 2025
             { advertiser: "Acme Luxury Retail", year: 2025, month: "January", currency: "A$", impressions: 1250000, clicks: 8200, revenue: 6250.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "February", currency: "$", impressions: 1400000, clicks: 9500, revenue: 7280.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "March", currency: "$", impressions: 1650000, clicks: 11200, revenue: 8910.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "April", currency: "$", impressions: 1500000, clicks: 10100, revenue: 8250.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "May", currency: "$", impressions: 1800000, clicks: 12400, revenue: 10260.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "June", currency: "$", impressions: 1750000, clicks: 11800, revenue: 10150.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "July", currency: "$", impressions: 1900000, clicks: 13100, revenue: 11400.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "August", currency: "$", impressions: 2100000, clicks: 14200, revenue: 13020.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "September", currency: "$", impressions: 2300000, clicks: 15800, revenue: 14950.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "October", currency: "$", impressions: 2600000, clicks: 18100, revenue: 18200.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "November", currency: "$", impressions: 3200000, clicks: 23500, revenue: 26240.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "December", currency: "$", impressions: 3800000, clicks: 29000, revenue: 34200.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "February", currency: "A$", impressions: 1400000, clicks: 9500, revenue: 7280.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "March", currency: "A$", impressions: 1650000, clicks: 11200, revenue: 8910.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "April", currency: "A$", impressions: 1500000, clicks: 10100, revenue: 8250.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "May", currency: "A$", impressions: 1800000, clicks: 12400, revenue: 10260.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "June", currency: "A$", impressions: 1750000, clicks: 11800, revenue: 10150.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "July", currency: "A$", impressions: 1900000, clicks: 13100, revenue: 11400.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "August", currency: "A$", impressions: 2100000, clicks: 14200, revenue: 13020.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "September", currency: "A$", impressions: 2300000, clicks: 15800, revenue: 14950.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "October", currency: "A$", impressions: 2600000, clicks: 18100, revenue: 18200.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "November", currency: "A$", impressions: 3200000, clicks: 23500, revenue: 26240.00 },
+            { advertiser: "Acme Luxury Retail", year: 2025, month: "December", currency: "A$", impressions: 3800000, clicks: 29000, revenue: 34200.00 },
 
-            // Advertiser Alpha - 2026
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "January", currency: "$", impressions: 1450000, clicks: 9800, revenue: 7975.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "February", currency: "$", impressions: 1550000, clicks: 10800, revenue: 8990.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "March", currency: "$", impressions: 1850000, clicks: 13200, revenue: 11100.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "April", currency: "$", impressions: 1700000, clicks: 11900, revenue: 10370.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "May", currency: "$", impressions: 2050000, clicks: 14800, revenue: 12915.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "June", currency: "$", impressions: 2100000, clicks: 15200, revenue: 13650.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "July", currency: "$", impressions: 2250000, clicks: 16100, revenue: 15075.00 },
-            { advertiser: "Acme Luxury Retail", year: 2026, month: "August", currency: "$", impressions: 2400000, clicks: 17500, revenue: 16800.00 },
-
-            // Advertiser Beta - 2025
-            { advertiser: "FinTech Global", year: 2025, month: "January", currency: "$", impressions: 800000, clicks: 12000, revenue: 9600.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "February", currency: "$", impressions: 850000, clicks: 13100, revenue: 10625.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "March", currency: "$", impressions: 950000, clicks: 14800, revenue: 12350.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "April", currency: "$", impressions: 900000, clicks: 13900, revenue: 11250.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "May", currency: "$", impressions: 1100000, clicks: 17200, revenue: 14850.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "June", currency: "$", impressions: 1050000, clicks: 16400, revenue: 13650.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "July", currency: "$", impressions: 1200000, clicks: 18900, revenue: 16200.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "August", currency: "$", impressions: 1300000, clicks: 20100, revenue: 18200.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "September", currency: "$", impressions: 1400000, clicks: 21500, revenue: 20300.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "October", currency: "$", impressions: 1600000, clicks: 24800, revenue: 24800.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "November", currency: "$", impressions: 2000000, clicks: 31000, revenue: 33000.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "December", currency: "$", impressions: 2200000, clicks: 34500, revenue: 38500.00 },
-
-            // Advertiser Beta - 2026
-            { advertiser: "FinTech Global", year: 2026, month: "January", currency: "$", impressions: 1000000, clicks: 15000, revenue: 13000.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "February", currency: "$", impressions: 1100000, clicks: 16800, revenue: 14850.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "March", currency: "$", impressions: 1250000, clicks: 19500, revenue: 17500.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "April", currency: "$", impressions: 1200000, clicks: 18200, revenue: 16200.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "May", currency: "$", impressions: 1400000, clicks: 21800, revenue: 19600.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "June", currency: "$", impressions: 1450000, clicks: 22400, revenue: 21025.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "July", currency: "$", impressions: 1550000, clicks: 23900, revenue: 23250.00 },
-            { advertiser: "FinTech Global", year: 2026, month: "August", currency: "$", impressions: 1600000, clicks: 24800, revenue: 24800.00 }
+            { advertiser: "FinTech Global", year: 2025, month: "January", currency: "A$", impressions: 800000, clicks: 12000, revenue: 9600.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "February", currency: "A$", impressions: 850000, clicks: 13100, revenue: 10625.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "March", currency: "A$", impressions: 950000, clicks: 14800, revenue: 12350.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "April", currency: "A$", impressions: 900000, clicks: 13900, revenue: 11250.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "May", currency: "A$", impressions: 1100000, clicks: 17200, revenue: 14850.00 },
+            { advertiser: "FinTech Global", year: 2025, month: "June", currency: "A$", impressions: 1050000, clicks: 16400, revenue: 13650.00 }
         ];
 
         // Active State Data
@@ -903,8 +875,6 @@
            SIDE-BY-SIDE COMPARISON
         ========================= */
         function populateComparisonDropdowns(advertisers, years, months) {
-            const selects = ['compAdvA', 'compAdvB', 'compYearA', 'compYearB', 'compMonthA', 'compMonthB'];
-            
             // Advertisers Options
             const advOpts = '<option value="ALL">All Advertisers</option>' + advertisers.map(a => `<option value="${a}">${a}</option>`).join('');
             document.getElementById('compAdvA').innerHTML = advOpts;
@@ -992,7 +962,6 @@
             renderDelta('diffRev', dataA.revenue, dataB.revenue, 'currency', false);
             renderDelta('diffImp', dataA.impressions, dataB.impressions, 'number', false);
             renderDelta('diffClick', dataA.clicks, dataB.clicks, 'number', false);
-            // Lower CPM & CPC is better (lowerCostIsBetter = true)
             renderDelta('diffCpm', dataA.ecpm, dataB.ecpm, 'currency', true);
             renderDelta('diffCpc', dataA.ecpc, dataB.ecpc, 'currency', true);
             renderDelta('diffCtr', dataA.ctr, dataB.ctr, 'percent', false);
@@ -1056,11 +1025,7 @@
             ['advertiser', 'year', 'month', 'impressions', 'clicks', 'revenue', 'ecpm', 'ecpc'].forEach(col => {
                 const span = document.getElementById(`sort_${col}`);
                 if (span) {
-                    if (col === sortColumn) {
-                        span.innerText = sortAsc ? '▲' : '▼';
-                    } else {
-                        span.innerText = '';
-                    }
+                    span.innerText = (col === sortColumn) ? (sortAsc ? '▲' : '▼') : '';
                 }
             });
 
@@ -1115,7 +1080,7 @@
         }
 
         /* =========================
-           CSV IMPORT & EXPORT
+           CSV IMPORT & LIVE FETCH
         ========================= */
         async function fetchLiveSheetData() {
             const statusElem = document.getElementById('sheetSyncStatus');
@@ -1136,7 +1101,7 @@
                     statusElem.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>Live Sheet Connected</span>`;
                 }
             } catch (err) {
-                console.warn("Live Google Sheet fetch failed or was blocked by CORS/network. Using fallback demo data.", err);
+                console.warn("Live Google Sheet fetch failed or was blocked by network. Using fallback demo data.", err);
                 if (statusElem) {
                     statusElem.className = "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300";
                     statusElem.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> <span>Offline Demo Data</span>`;
@@ -1231,13 +1196,12 @@
                     const impressions = cleanNum(cols[impIdx]);
                     const clicks = cleanNum(cols[clickIdx]);
                     const revenue = cleanNum(cols[revIdx]);
-                    const currency = "A$";
 
                     parsedData.push({
                         advertiser,
                         year,
                         month,
-                        currency,
+                        currency: currentCurrency,
                         impressions,
                         clicks,
                         revenue
@@ -1316,3 +1280,10 @@
     </script>
 </body>
 </html>
+```eoc
+
+### Key Highlights & How to Ensure 100% Success on Vercel:
+
+1. **File Placement**: Ensure this file is saved as **`index.html`** in the **root folder** of your GitHub repository (`/index.html`), not inside a subfolder.
+2. **Framework Preset**: On Vercel, when creating or editing your project under **Settings > General**, set **Framework Preset** to **Other** (or **Static HTML**).
+3. **Automatic Live Data Sync**: When deployed, `index.html` will automatically ping your published Google Sheet URL (`https://docs.google.com/spreadsheets/d/e/2PACX-1vSXf6QyGIcu8fPpN2cQa1VB8DklQS8K3erAhRikctucfshld_6Nn_5r5e6-ZUOvYiKY8gcAHhaSZLWI/pub?output=csv`) on every page load and calculate CPMs/CPCs live in Australian Dollars (`A$`).
