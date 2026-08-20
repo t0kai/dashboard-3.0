@@ -28,8 +28,10 @@
     
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide Icons CDN — explicit UMD path, pinned.
+         The bare package root serves a CommonJS build that never defines
+         window.lucide, which is what produced "lucide is not defined". -->
+    <script src="https://cdn.jsdelivr.net/npm/lucide@1.33.0/dist/umd/lucide.min.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -395,6 +397,304 @@
                 </div>
             </section>
 
+            <!-- ===== GROWTH ANALYSIS ===== -->
+            <section class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i data-lucide="trending-up" class="w-5 h-5 text-brand-600"></i>
+                            Rate growth since baseline
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            How much CPM and CPC actually moved, separating real price change from client mix change
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Client</label>
+                            <select id="growthClient" onchange="handleGrowthClientChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 min-w-[10rem] font-medium"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Baseline window</label>
+                            <div class="flex items-center gap-1">
+                                <select id="baselineFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <span class="text-xs text-slate-400">to</span>
+                                <select id="baselineTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Current window</label>
+                            <div class="flex items-center gap-1">
+                                <select id="currentFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <span class="text-xs text-slate-400">to</span>
+                                <select id="currentTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                            </div>
+                        </div>
+                        <button onclick="resetWindows()" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                            Reset
+                        </button>
+                        <button onclick="exportGrowthCSV()" class="inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export growth
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Brand-buy filter -->
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-4 py-3.5 space-y-3">
+
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div class="flex items-start gap-2">
+                            <i data-lucide="funnel" class="w-4 h-4 text-amber-600 dark:text-amber-500 mt-0.5 flex-shrink-0"></i>
+                            <div>
+                                <p id="outlierTitle" class="text-xs font-semibold text-amber-900 dark:text-amber-200">Brand-buy rows excluded from CPC</p>
+                                <p class="text-[11px] text-amber-800/80 dark:text-amber-400/80 mt-1 leading-relaxed">
+                                    Some campaigns are sold on impressions, not clicks. They bill a flat fee, collect
+                                    almost no clicks, and produce an implied cost-per-click in the tens of dollars.
+                                    Averaging those into a CPC figure lets a single sponsorship invoice swing an
+                                    entire month. Any row whose revenue divided by clicks exceeds
+                                    <span class="font-semibold">A$<span id="outlierThreshold">2.00</span></span>
+                                    is treated as one of these and held out of every CPC calculation.
+                                </p>
+                            </div>
+                        </div>
+                        <label class="inline-flex items-center gap-2 cursor-pointer flex-shrink-0">
+                            <input type="checkbox" id="outlierToggle" checked onchange="handleOutlierToggle()" class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                            <span class="text-xs font-medium text-amber-900 dark:text-amber-200">Exclude from CPC</span>
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wide text-amber-700/70 dark:text-amber-500/70 font-semibold">Rows flagged</p>
+                            <p id="outlierCount" class="text-sm font-bold text-amber-900 dark:text-amber-200">--</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wide text-amber-700/70 dark:text-amber-500/70 font-semibold">Of total revenue</p>
+                            <p id="outlierRev" class="text-sm font-bold text-amber-900 dark:text-amber-200">--</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wide text-amber-700/70 dark:text-amber-500/70 font-semibold">Of total clicks</p>
+                            <p id="outlierClk" class="text-sm font-bold text-amber-900 dark:text-amber-200">--</p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] uppercase tracking-wide text-amber-700/70 dark:text-amber-500/70 font-semibold">Worst implied CPC</p>
+                            <p id="outlierWorst" class="text-sm font-bold text-amber-900 dark:text-amber-200">--</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-amber-200 dark:border-amber-800/50 pt-3 space-y-1.5">
+                        <p class="text-[11px] text-amber-900 dark:text-amber-200">
+                            <span class="font-semibold">What the toggle changes.</span>
+                            <span id="outlierImpact">--</span>
+                        </p>
+                        <p class="text-[11px] text-amber-800/80 dark:text-amber-400/80">
+                            <span class="font-semibold">CPM is never filtered.</span>
+                            The impressions on these rows are real and correctly priced, so they stay in every
+                            CPM figure whichever way the toggle is set. Only the click denominator is unreliable.
+                        </p>
+                        <p class="text-[11px] text-amber-800/80 dark:text-amber-400/80">
+                            <span class="font-semibold">Affected clients.</span>
+                            <span id="outlierClients">--</span>
+                            Flagged rows stay visible in the campaign log below, tagged BRAND, with the
+                            struck-through eCPC showing what was set aside.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Headline cards -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+                    <div onclick="toggleMethodDetail('lfl')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMethodDetail('lfl')}" role="button" tabindex="0" aria-expanded="false" id="cardLfl" class="lg:col-span-1 bg-brand-50 dark:bg-brand-900/20 border-2 border-brand-500 dark:border-brand-600 rounded-xl p-4 cursor-pointer hover:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:text-brand-300">Like for like</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-600 text-white font-semibold">Headline</span>
+                        </div>
+                        <p id="lflScopeLabel" class="text-[11px] text-brand-700/80 dark:text-brand-300/80 mb-3">Same clients in both windows</p>
+
+                        <div class="space-y-3">
+                            <div>
+                                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">CPM</p>
+                                <p id="lflCpmPct" class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">--</p>
+                                <p id="lflCpmAbs" class="text-[11px] text-slate-500 dark:text-slate-400">--</p>
+                            </div>
+                            <div class="border-t border-brand-200 dark:border-brand-800 pt-3">
+                                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">CPC</p>
+                                <p id="lflCpcPct" class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">--</p>
+                                <p id="lflCpcAbs" class="text-[11px] text-slate-500 dark:text-slate-400">--</p>
+                            </div>
+                        </div>
+                        <p id="lflCohort" class="text-[10px] text-slate-500 dark:text-slate-400 mt-3 pt-3 border-t border-brand-200 dark:border-brand-800">--</p>
+                    </div>
+
+                    <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div onclick="toggleMethodDetail('trend')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMethodDetail('trend')}" role="button" tabindex="0" aria-expanded="false" id="cardTrend" class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between">Trend line <i data-lucide="chevron-down" class="w-3 h-3"></i></p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3">Underlying direction across every month</p>
+                            <div class="space-y-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-600 dark:text-slate-400">CPM</p>
+                                    <p id="trendCpm" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="trendCpmSub" class="text-[10px] text-slate-500">--</p>
+                                </div>
+                                <div class="border-t border-slate-200 dark:border-slate-700 pt-2">
+                                    <p class="text-[11px] text-slate-600 dark:text-slate-400">CPC</p>
+                                    <p id="trendCpc" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="trendCpcSub" class="text-[10px] text-slate-500">--</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div onclick="toggleMethodDetail('blended')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleMethodDetail('blended')}" role="button" tabindex="0" aria-expanded="false" id="cardBlended" class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 cursor-pointer hover:border-slate-400 dark:hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 transition">
+                            <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1 flex items-center justify-between">Blended <i data-lucide="chevron-down" class="w-3 h-3"></i></p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mb-3">Whole book, mix shift included</p>
+                            <div class="space-y-2">
+                                <div>
+                                    <p class="text-[11px] text-slate-600 dark:text-slate-400">CPM</p>
+                                    <p id="blendCpm" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="blendCpmSub" class="text-[10px] text-slate-500">--</p>
+                                </div>
+                                <div class="border-t border-slate-200 dark:border-slate-700 pt-2">
+                                    <p class="text-[11px] text-slate-600 dark:text-slate-400">CPC</p>
+                                    <p id="blendCpc" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="blendCpcSub" class="text-[10px] text-slate-500">--</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="divergenceNote" class="sm:col-span-2 hidden bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/50 rounded-lg px-4 py-3">
+                            <p class="text-xs text-rose-800 dark:text-rose-300"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="methodDetail" class="hidden bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-5"></div>
+
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 -mt-2">Click any of the three cards above to see what it measures and when to trust it.</p>
+
+                <!-- Metric switch + trend chart -->
+                <div class="border-t border-slate-100 dark:border-slate-700 pt-5">
+                    <div class="flex flex-wrap items-end justify-between gap-3 mb-3">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Monthly rate with trend and median</h4>
+                            <p id="trendViewNote" class="text-[11px] text-slate-500 dark:text-slate-400"></p>
+                        </div>
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">View</label>
+                                <select id="trendView" onchange="handleTrendViewChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5">
+                                    <option value="combined">All together</option>
+                                    <option value="clients">Client by client</option>
+                                    <option value="both">Both layered</option>
+                                </select>
+                            </div>
+                            <div id="trendTopNWrap" class="relative">
+                                <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Clients on chart</label>
+                                <button id="trendClientBtn" onclick="toggleTrendClientPicker(event)" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 min-w-[9rem] text-left flex items-center justify-between gap-2">
+                                    <span id="trendClientBtnLabel">8 selected</span>
+                                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                </button>
+
+                                <div id="trendClientPanel" class="hidden absolute right-0 mt-1 w-80 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-lg z-40 p-3 space-y-2">
+                                    <input type="text" id="trendClientSearch" onkeyup="renderTrendClientList()" placeholder="Search clients..." class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5">
+
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <button onclick="trendClientPreset('one')" class="text-[11px] px-2 py-1 rounded border border-brand-500 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/30 font-medium">Top 1 only</button>
+                                        <button onclick="trendClientPreset(5)" class="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Top 5</button>
+                                        <button onclick="trendClientPreset(8)" class="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Top 8</button>
+                                        <button onclick="trendClientPreset('all')" class="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">All</button>
+                                        <button onclick="trendClientPreset('none')" class="text-[11px] px-2 py-1 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700">Clear</button>
+                                    </div>
+
+                                    <p class="text-[10px] text-slate-500 dark:text-slate-400 leading-snug">
+                                        Pick exactly one client to get its trend line and rolling median drawn over it.
+                                    </p>
+
+                                    <div id="trendClientList" class="max-h-56 overflow-y-auto border-t border-slate-200 dark:border-slate-700 pt-2 space-y-0.5"></div>
+                                </div>
+                            </div>
+                            <div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-700 overflow-hidden">
+                                <button id="btnMetricCpm" onclick="setGrowthMetric('cpm')" class="text-xs px-3 py-1.5 font-medium bg-brand-600 text-white">CPM</button>
+                                <button id="btnMetricCpc" onclick="setGrowthMetric('cpc')" class="text-xs px-3 py-1.5 font-medium text-slate-600 dark:text-slate-300">CPC</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative h-80">
+                        <canvas id="growthTrendChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Single client view: month by month -->
+                <div id="singleClientPanel" class="hidden border-t border-slate-100 dark:border-slate-700 pt-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h4 id="singleClientTitle" class="text-sm font-bold text-slate-800 dark:text-slate-200">--</h4>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Every month on record. Shaded rows fall inside the baseline or current window.</p>
+                        </div>
+                        <button onclick="setGrowthClient('ALL')" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap">
+                            Back to all clients
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                        <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+                            <thead class="text-[11px] uppercase bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-3 py-2.5">Month</th>
+                                    <th class="px-3 py-2.5">Window</th>
+                                    <th class="px-3 py-2.5 text-right">Impressions</th>
+                                    <th class="px-3 py-2.5 text-right">Clicks</th>
+                                    <th class="px-3 py-2.5 text-right">Revenue</th>
+                                    <th class="px-3 py-2.5 text-right">CPM</th>
+                                    <th class="px-3 py-2.5 text-right">CPC</th>
+                                </tr>
+                            </thead>
+                            <tbody id="singleClientBody" class="divide-y divide-slate-100 dark:divide-slate-700/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Per client breakdown -->
+                <div class="border-t border-slate-100 dark:border-slate-700 pt-5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Every client, side by side</h4>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Baseline versus current window per client. Click any row to open it.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Sort</label>
+                            <select id="breakdownSort" onchange="renderClientBreakdown()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5">
+                                <option value="cpmPct">CPM change</option>
+                                <option value="cpcPct">CPC change</option>
+                                <option value="revenue" selected>Revenue</option>
+                                <option value="months">Months of data</option>
+                                <option value="client">Name</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+                        <table class="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+                            <thead class="text-[11px] uppercase bg-slate-50 dark:bg-slate-900/80 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="px-3 py-2.5">Client</th>
+                                    <th class="px-3 py-2.5 text-right">Months</th>
+                                    <th class="px-3 py-2.5 text-right">CPM base</th>
+                                    <th class="px-3 py-2.5 text-right">CPM now</th>
+                                    <th class="px-3 py-2.5 text-right">CPM Δ</th>
+                                    <th class="px-3 py-2.5 text-right">CPC base</th>
+                                    <th class="px-3 py-2.5 text-right">CPC now</th>
+                                    <th class="px-3 py-2.5 text-right">CPC Δ</th>
+                                    <th class="px-3 py-2.5 text-right">Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody id="breakdownBody" class="divide-y divide-slate-100 dark:divide-slate-700/60"></tbody>
+                        </table>
+                    </div>
+                    <p id="breakdownNote" class="text-[11px] text-slate-500 dark:text-slate-400 mt-2"></p>
+                </div>
+
+            </section>
+
             <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden space-y-4 p-5">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
@@ -431,6 +731,8 @@
                                 <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('revenue')">Revenue (Spend) <span id="sort_revenue"></span></th>
                                 <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('ecpm')">eCPM <span id="sort_ecpm"></span></th>
                                 <th scope="col" class="px-4 py-3 text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('ecpc')">eCPC <span id="sort_ecpc"></span></th>
+                                <th scope="col" class="px-4 py-3 text-center">Trend</th>
+                                <th scope="col" class="px-4 py-3 text-right">Months</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody" class="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -506,31 +808,218 @@
         // Default currency symbol fixed to AUD
         const currentCurrency = "A$";
 
-        // Initial Fallback DV360 Dataset spanning Advertisers, Months, and Years
-        const demoDV360Data = [
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "January", currency: "A$", impressions: 1250000, clicks: 8200, revenue: 6250.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "February", currency: "A$", impressions: 1400000, clicks: 9500, revenue: 7280.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "March", currency: "A$", impressions: 1650000, clicks: 11200, revenue: 8910.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "April", currency: "A$", impressions: 1500000, clicks: 10100, revenue: 8250.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "May", currency: "A$", impressions: 1800000, clicks: 12400, revenue: 10260.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "June", currency: "A$", impressions: 1750000, clicks: 11800, revenue: 10150.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "July", currency: "A$", impressions: 1900000, clicks: 13100, revenue: 11400.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "August", currency: "A$", impressions: 2100000, clicks: 14200, revenue: 13020.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "September", currency: "A$", impressions: 2300000, clicks: 15800, revenue: 14950.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "October", currency: "A$", impressions: 2600000, clicks: 18100, revenue: 18200.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "November", currency: "A$", impressions: 3200000, clicks: 23500, revenue: 26240.00 },
-            { advertiser: "Acme Luxury Retail", year: 2025, month: "December", currency: "A$", impressions: 3800000, clicks: 29000, revenue: 34200.00 },
-
-            { advertiser: "FinTech Global", year: 2025, month: "January", currency: "A$", impressions: 800000, clicks: 12000, revenue: 9600.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "February", currency: "A$", impressions: 850000, clicks: 13100, revenue: 10625.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "March", currency: "A$", impressions: 950000, clicks: 14800, revenue: 12350.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "April", currency: "A$", impressions: 900000, clicks: 13900, revenue: 11250.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "May", currency: "A$", impressions: 1100000, clicks: 17200, revenue: 14850.00 },
-            { advertiser: "FinTech Global", year: 2025, month: "June", currency: "A$", impressions: 1050000, clicks: 16400, revenue: 13650.00 }
-        ];
+        /* Snapshot of the published sheet, embedded so a blocked fetch shows
+           real numbers instead of invented ones. Parsed through the same code
+           path as a live sync. Last refreshed: 2026-08-20 (204 rows,
+           2024/09 - 2026/07). */
+        const FALLBACK_CSV = `Advertiser,Year,Month,Partner Currency,Impressions,Clicks,Revenue (Partner Currency),Revenue eCPM (Partner Currency),Revenue eCPC (Partner Currency)
+ACBJ,2024,2024/09,AUD,146873,2634,178.4216,1.214802,0.067738
+ACM,2024,2024/09,AUD,1603520,22392,1400.828,0.873595,0.062559
+Fabulate,2024,2024/09,AUD,1141801,3641,1538.574,1.347498,0.422569
+Man of Many,2024,2024/09,AUD,124985,2009,137.1689,1.097483,0.068277
+ACM,2024,2024/10,AUD,3241722,30963,4249.114,1.310758,0.137232
+Avid,2024,2024/10,AUD,1608134,20168,1985.853,1.234881,0.098466
+Fabulate,2024,2024/10,AUD,1693551,5980,2377.483,1.403845,0.397572
+Fabulate CPC,2024,2024/10,AUD,512481,5000,681.1374,1.329098,0.136227
+Man of Many,2024,2024/10,AUD,2016,27,2.16193,1.072386,0.080071
+UMCO,2024,2024/10,AUD,71029,1715,88.89946,1.251594,0.051836
+We Are Explorers,2024,2024/10,AUD,106997,2733,115.0418,1.075187,0.042094
+ACM,2024,2024/11,AUD,1484606,26657,1405.262,0.946555,0.052716
+Avid,2024,2024/11,AUD,1071442,13034,1386.085,1.293663,0.106344
+Fabulate,2024,2024/11,AUD,1056219,2893,1386.782,1.312968,0.479358
+Fabulate CPC,2024,2024/11,AUD,630381,10221,820.4908,1.301579,0.080275
+Mediacorp,2024,2024/11,AUD,1104425,49831,601.4781,0.544607,0.01207
+UMCO,2024,2024/11,AUD,1965,15,1.996522,1.016042,0.133101
+ACM,2024,2024/12,AUD,1428733,28211,1403.291,0.982192,0.049743
+Affinity,2024,2024/12,AUD,173291,429,219.0623,1.26413,0.510635
+Avid,2024,2024/12,AUD,283660,3386,309.6627,1.091669,0.091454
+Fabulate,2024,2024/12,AUD,969447,2758,952.7701,0.982798,0.345457
+Mediacorp,2024,2024/12,AUD,786760,36061,338.2489,0.429926,0.00938
+Pinstripe Media,2024,2024/12,AUD,162551,1192,147.9531,0.910195,0.124122
+We Are Orphan,2024,2024/12,AUD,5332170,17448,7514.432,1.409263,0.430676
+ACM,2025,2025/01,AUD,256906,5231,162.6302,0.633034,0.03109
+Affinity,2025,2025/01,AUD,1164509,2178,1287.712,1.105798,0.591236
+Audience360,2025,2025/01,AUD,62002,1215,45.50064,0.733858,0.037449
+Fabulate,2025,2025/01,AUD,298902,867,241.6552,0.808476,0.278726
+OSAN Ability,2025,2025/01,AUD,36546,139,51.16107,1.399909,0.368065
+Pinstripe Media,2025,2025/01,AUD,15516,164,15.72409,1.013411,0.095879
+Time Out,2025,2025/01,AUD,2625,76,2.812252,1.071334,0.037003
+ACM,2025,2025/02,AUD,650001,16369,481.0686,0.740104,0.029389
+Affinity,2025,2025/02,AUD,902574,1332,1476.771,1.636177,1.108687
+AusBiz,2025,2025/02,AUD,55865,364,73.25277,1.311246,0.201244
+Fabulate,2025,2025/02,AUD,1021714,2868,998.2108,0.976996,0.348051
+OSAN Ability,2025,2025/02,AUD,380306,2935,290.262,0.763233,0.098897
+Time Out,2025,2025/02,AUD,56124,911,58.62734,1.044604,0.064355
+ACM,2025,2025/03,AUD,1122634,33020,780.8104,0.695516,0.023647
+AusBiz,2025,2025/03,AUD,34412,305,32.61866,0.947886,0.106946
+Fabulate,2025,2025/03,AUD,504918,1180,339.6714,0.672726,0.287857
+ACM,2025,2025/04,AUD,1580208,43226,1309.517,0.828699,0.030295
+Fabulate,2025,2025/04,AUD,414922,1040,333.8075,0.804507,0.320969
+Time Out,2025,2025/04,AUD,57938,542,53.71454,0.927104,0.099104
+ACBJ,2025,2025/05,AUD,550002,13266,650.6085,1.18292,0.049043
+ACM,2025,2025/05,AUD,649271,15857,470.4809,0.724629,0.02967
+Affinity,2025,2025/05,AUD,460013,793,843.1327,1.832845,1.063219
+Australian Traveller,2025,2025/05,AUD,31280,1569,32.27259,1.031733,0.020569
+Fabulate,2025,2025/05,AUD,117951,279,141.2656,1.197663,0.506328
+Furst Media,2025,2025/05,AUD,30010,95,48.57436,1.618606,0.511309
+Newsquest,2025,2025/05,AUD,15427,234,16.86703,1.093345,0.072081
+ACBJ,2025,2025/06,AUD,702499,17136,766.9757,1.091782,0.044758
+ACM,2025,2025/06,AUD,1936363,36984,1932.618,0.998066,0.052256
+Affinity,2025,2025/06,AUD,3109773,22254,11804.92,3.796072,0.530463
+Australian Traveller,2025,2025/06,AUD,42262,675,42.56661,1.007208,0.063062
+Fabulate CPC,2025,2025/06,AUD,56928,231,69.13762,1.214475,0.299297
+Furst Media,2025,2025/06,AUD,218879,2226,282.8259,1.292156,0.127056
+Mediacorp,2025,2025/06,AUD,617551,2632,1419.849,2.29916,0.539456
+Newsquest,2025,2025/06,AUD,76736,1238,59.43501,0.774539,0.048009
+Pinstripe Media,2025,2025/06,AUD,706383,9186,815.8288,1.154938,0.088812
+The Brag,2025,2025/06,AUD,525795,6909,842.3045,1.601964,0.121914
+Urban List,2025,2025/06,AUD,200007,3760,269.7972,1.348939,0.071755
+ACBJ,2025,2025/07,AUD,1959,73,1.118222,0.570812,0.015318
+ACM,2025,2025/07,AUD,1312947,35763,1133.868,0.863605,0.031705
+Affinity,2025,2025/07,AUD,1879058,10916,11157.94,5.938052,1.022164
+Australian Traveller,2025,2025/07,AUD,207152,9014,230.6155,1.113267,0.025584
+Fabulate,2025,2025/07,AUD,104539,865,128.2984,1.227277,0.148322
+Fabulate CPC,2025,2025/07,AUD,96201,2739,111.4876,1.158903,0.040704
+Mediacorp,2025,2025/07,AUD,932176,11250,1805.622,1.936997,0.1605
+Newsquest,2025,2025/07,AUD,36677,1077,19.25869,0.525089,0.017882
+Pinstripe Media,2025,2025/07,AUD,736050,17812,672.9583,0.914283,0.037781
+The Independent,2025,2025/07,AUD,216799,5150,296.987,1.369873,0.057667
+Trip Advisor,2025,2025/07,AUD,4169914,35337,3856.636,0.924872,0.109139
+We Are Explorers,2025,2025/07,AUD,61822,1647,63.26619,1.02336,0.038413
+ACBJ,2025,2025/08,AUD,261869,3394,366.8567,1.400917,0.10809
+ACM,2025,2025/08,AUD,1839589,49011,1856.905,1.009413,0.037888
+Affinity,2025,2025/08,AUD,129752,17,1668.771,12.86124,98.16301
+Audience360,2025,2025/08,AUD,219912,3685,269.3468,1.224793,0.073093
+Australian Traveller,2025,2025/08,AUD,183860,6063,153.9321,0.837224,0.025389
+Fabulate,2025,2025/08,AUD,210490,629,287.9401,1.367951,0.457774
+Mediacorp,2025,2025/08,AUD,869928,10959,1994.653,2.292894,0.18201
+Newsquest,2025,2025/08,AUD,59920,944,92.00474,1.53546,0.097463
+Pinstripe Media,2025,2025/08,AUD,320912,6423,337.4898,1.051658,0.052544
+The Independent,2025,2025/08,AUD,391936,8409,448.2401,1.143656,0.053305
+Urban List,2025,2025/08,AUD,377090,7695,514.7638,1.365095,0.066896
+ACBJ,2025,2025/09,AUD,140939,4882,131.4928,0.932976,0.026934
+ACM,2025,2025/09,AUD,1363274,34166,1229.191,0.901647,0.035977
+Affinity,2025,2025/09,AUD,322097,224,2448.31,7.601157,10.92996
+Audience360,2025,2025/09,AUD,180979,3696,154.2695,0.852416,0.04174
+Australian Traveller,2025,2025/09,AUD,16039,645,13.16888,0.821054,0.020417
+Fabulate,2025,2025/09,AUD,431143,1368,453.0849,1.050892,0.331202
+Freethink,2025,2025/09,AUD,158675,3754,183.5744,1.156921,0.048901
+Mediacorp,2025,2025/09,AUD,81319,1384,248.3305,3.053783,0.17943
+Newsquest,2025,2025/09,AUD,51343,2490,41.72793,0.812729,0.016758
+Pinstripe Media,2025,2025/09,AUD,647748,9802,604.6383,0.933447,0.061685
+The Independent,2025,2025/09,AUD,1064338,21915,1135.644,1.066995,0.05182
+Urban List,2025,2025/09,AUD,184085,3758,254.0703,1.380179,0.067608
+ACBJ,2025,2025/10,AUD,1117455,24730,1298.469,1.161988,0.052506
+ACM,2025,2025/10,AUD,1370187,31780,1364.755,0.996036,0.042944
+Affinity,2025,2025/10,AUD,783819,984,4820.804,6.150404,4.899191
+Fabulate,2025,2025/10,AUD,314550,1094,319.8002,1.016691,0.292322
+FanFinders,2025,2025/10,AUD,150491,2986,113.7093,0.755589,0.038081
+Freethink,2025,2025/10,AUD,1837,39,1.089362,0.593011,0.027932
+MOTORSPORT,2025,2025/10,AUD,86701,64,47.98316,0.553433,0.749737
+Mediacorp,2025,2025/10,AUD,745145,5662,1057.157,1.418726,0.186711
+Pinstripe Media,2025,2025/10,AUD,258915,6299,356.1683,1.375619,0.056544
+The Independent,2025,2025/10,AUD,1493892,27462,1762.813,1.180014,0.064191
+Time Out,2025,2025/10,AUD,415314,8073,503.3454,1.211963,0.062349
+ACBJ,2025,2025/11,AUD,10955,284,3.331727,0.304128,0.011731
+ACM,2025,2025/11,AUD,1345263,34351,1323.156,0.983566,0.038519
+Affinity,2025,2025/11,AUD,984468,753,6877.579,6.986087,9.133572
+Audience360,2025,2025/11,AUD,192376,3463,304.629,1.583508,0.087967
+Benzinga,2025,2025/11,AUD,749471,7913,910.3567,1.214666,0.115046
+Fabulate,2025,2025/11,AUD,900327,2722,1143.614,1.270221,0.420137
+Furst Media,2025,2025/11,AUD,56477,1180,74.03518,1.310891,0.062742
+Mediacorp,2025,2025/11,AUD,3247074,45019,3701.412,1.139922,0.082219
+Pinstripe Media,2025,2025/11,AUD,338240,5366,421.777,1.246975,0.078602
+The Independent,2025,2025/11,AUD,3152088,63810,3345.922,1.061494,0.052436
+ACM,2025,2025/12,AUD,2363376,50474,2556.843,1.081861,0.050657
+Affinity,2025,2025/12,AUD,914458,3930,3667.832,4.010936,0.933291
+Audience360,2025,2025/12,AUD,1480850,36167,1703.005,1.150019,0.047087
+BAUER MEDIA,2025,2025/12,AUD,151490,2356,219.7423,1.45054,0.093269
+Benzinga,2025,2025/12,AUD,709309,21915,860.6266,1.213331,0.039271
+Drive,2025,2025/12,AUD,1004814,10276,1145.575,1.140087,0.111481
+Fabulate,2025,2025/12,AUD,62110,164,162.3055,2.613195,0.989668
+Mediacorp,2025,2025/12,AUD,2850103,81312,1583.979,0.555762,0.01948
+Pinstripe Media,2025,2025/12,AUD,612012,10171,737.7551,1.205459,0.072535
+The Independent,2025,2025/12,AUD,1605573,35277,1261.801,0.785889,0.035768
+ACM,2026,2026/01,AUD,1043033,22801,1027.543,0.985149,0.045066
+Affinity,2026,2026/01,AUD,1719022,16366,4383.83,2.550188,0.267862
+Audience360,2026,2026/01,AUD,1208212,25618,1335.621,1.105453,0.052136
+Mediacorp,2026,2026/01,AUD,1463196,23588,1179.816,0.806328,0.050018
+Pinstripe Media,2026,2026/01,AUD,256980,4076,298.8523,1.16294,0.07332
+SYMPHONICS,2026,2026/01,AUD,2609230,1876,9486.172,3.635621,5.056595
+Symphonics - Revo,2026,2026/01,AUD,38093,25,121.9011,3.200093,4.876045
+The Independent,2026,2026/01,AUD,624454,13911,559.0025,0.895186,0.040184
+ACBJ,2026,2026/02,AUD,169104,3150,239.1517,1.414229,0.075921
+ACM,2026,2026/02,AUD,1639936,29985,1743.666,1.063253,0.058151
+Affinity,2026,2026/02,AUD,1023470,5650,2296.539,2.243875,0.406467
+Audience360,2026,2026/02,AUD,313667,3330,348.9456,1.112472,0.104788
+Benzinga,2026,2026/02,AUD,417005,10070,520.6447,1.248533,0.051703
+Demo Account,2026,2026/02,AUD,32478,3879,38.56969,1.187563,0.009943
+Mediacorp,2026,2026/02,AUD,4419982,52997,6522.705,1.475731,0.123077
+Pinstripe Media,2026,2026/02,AUD,694999,12422,708.3419,1.019198,0.057023
+Symphonics - Revo,2026,2026/02,AUD,176243,67,535.3733,3.0377,7.990646
+The Independent,2026,2026/02,AUD,481681,10548,484.6137,1.006088,0.045944
+Trip Advisor,2026,2026/02,AUD,10402040,176281,14067.63,1.352392,0.079802
+ACBJ,2026,2026/03,AUD,18923,96,30.42085,1.607613,0.316884
+ACM,2026,2026/03,AUD,1634251,28356,1626.548,0.995286,0.057362
+Audience360,2026,2026/03,AUD,269067,2677,311.6507,1.158264,0.116418
+Benzinga,2026,2026/03,AUD,247668,7794,199.3748,0.805008,0.025581
+Freethink,2026,2026/03,AUD,150182,2970,189.251,1.260144,0.063721
+Heyden,2026,2026/03,AUD,15481,29,59.16529,3.8218,2.040182
+Mediacorp,2026,2026/03,AUD,4275709,74332,5978.326,1.398207,0.080427
+Newsquest,2026,2026/03,AUD,352623,7532,425.025,1.205324,0.056429
+Pinstripe Media,2026,2026/03,AUD,299148,5692,287.2424,0.960202,0.050464
+Symphonics - Revo,2026,2026/03,AUD,378436,70,1102.462,2.913205,15.74945
+The Independent,2026,2026/03,AUD,594579,11802,758.1451,1.275096,0.064239
+Trip Advisor,2026,2026/03,AUD,19295332,352536,27634.06,1.432163,0.078386
+ACBJ,2026,2026/04,AUD,26828,850,23.6612,0.881959,0.027837
+ACM,2026,2026/04,AUD,1105540,23665,849.1988,0.76813,0.035884
+Affinity,2026,2026/04,AUD,394038,2003,780.451,1.980649,0.389641
+Audience360,2026,2026/04,AUD,139220,1687,132.2545,0.949968,0.078396
+Benzinga,2026,2026/04,AUD,42670,1580,37.00455,0.867226,0.023421
+CANDR Media,2026,2026/04,AUD,201437,5152,184.7253,0.917038,0.035855
+Freethink,2026,2026/04,AUD,6004,311,4.674689,0.778596,0.015031
+Heyden,2026,2026/04,AUD,2396,7,8.964344,3.741379,1.280621
+Mediacorp,2026,2026/04,AUD,1368537,27977,2161.137,1.579158,0.077247
+Pinstripe Media,2026,2026/04,AUD,156097,3142,161.9987,1.037808,0.051559
+SYMPHONICS,2026,2026/04,AUD,860421,491,3198.873,3.7178,6.515016
+Symphonics - Revo,2026,2026/04,AUD,287993,25,792.6993,2.752495,31.70797
+The Independent,2026,2026/04,AUD,23170,575,10.79983,0.466113,0.018782
+We Are Explorers,2026,2026/04,AUD,18420,205,27.52478,1.494288,0.134267
+ACBJ,2026,2026/05,AUD,42165,978,35.14586,0.833532,0.035936
+ACM,2026,2026/05,AUD,3060873,46655,3540.215,1.156603,0.075881
+Affinity,2026,2026/05,AUD,1344998,10613,5185.639,3.855499,0.488612
+Audience360,2026,2026/05,AUD,140841,2645,183.4882,1.302804,0.069372
+Benzinga,2026,2026/05,AUD,372175,4398,840.8079,2.259174,0.19118
+CANDR Media,2026,2026/05,AUD,19409,503,18.63984,0.960371,0.037057
+Mediacorp,2026,2026/05,AUD,1409041,24117,2430.088,1.724639,0.100762
+Pinstripe Media,2026,2026/05,AUD,1027679,21570,1518.578,1.477677,0.070402
+Symphonics - Revo,2026,2026/05,AUD,185368,18,505.0253,2.724447,28.05696
+We Are Explorers,2026,2026/05,AUD,376051,5956,410.5236,1.09167,0.068926
+ACBJ,2026,2026/06,AUD,101330,1591,124.8535,1.232148,0.078475
+ACM,2026,2026/06,AUD,3522905,52012,4647.793,1.319307,0.08936
+Affinity,2026,2026/06,AUD,915321,1315,7707.638,8.420694,5.861321
+Audience360,2026,2026/06,AUD,206524,3744,247.9073,1.20038,0.066215
+Benzinga,2026,2026/06,AUD,203206,3363,675.3111,3.323283,0.200806
+Mamamia,2026,2026/06,AUD,200709,880,266.1884,1.326241,0.302487
+Mediacorp,2026,2026/06,AUD,1836279,45136,3280.536,1.786513,0.072681
+Pinstripe Media,2026,2026/06,AUD,1683726,27052,2419.205,1.436816,0.089428
+Symphonics - Revo,2026,2026/06,AUD,300116,25,848.1814,2.826178,33.92726
+The Independent,2026,2026/06,AUD,361550,7540,424.819,1.174994,0.056342
+Trip Advisor,2026,2026/06,AUD,191095,5134,207.513,1.085915,0.040419
+We Are Explorers,2026,2026/06,AUD,272472,6805,178.0698,0.653534,0.026167
+ACBJ,2026,2026/07,AUD,14295,472,18.73573,1.310649,0.039694
+ACM,2026,2026/07,AUD,3283972,76457,3342.285,1.017757,0.043715
+Affinity,2026,2026/07,AUD,337148,703,1466.511,4.349753,2.086075
+Audience360,2026,2026/07,AUD,305771,7984,326.2103,1.066845,0.040858
+Benzinga,2026,2026/07,AUD,291134,7541,355.952,1.22264,0.047202
+Mediacorp,2026,2026/07,AUD,1617020,42059,2463.424,1.523434,0.058571
+Pinstripe Media,2026,2026/07,AUD,366213,11309,445.2328,1.215776,0.03937
+Symphonics - Revo,2026,2026/07,AUD,227012,27,633.5817,2.790961,23.46599
+The Independent,2026,2026/07,AUD,136699,5655,113.372,0.829355,0.020048
+Trip Advisor,2026,2026/07,AUD,2572504,54441,2930.221,1.139054,0.053824`;
 
         // Active State Data
-        let rawData = [...demoDV360Data];
+        let rawData = [];   // populated from FALLBACK_CSV on load, then replaced by the live sync
         let filteredData = [];
         let chartInstance = null;
 
@@ -545,6 +1034,78 @@
             "January": 1, "February": 2, "March": 3, "April": 4, "May": 5, "June": 6,
             "July": 7, "August": 8, "September": 9, "October": 10, "November": 11, "December": 12
         };
+
+        const monthNames = ["January","February","March","April","May","June",
+                            "July","August","September","October","November","December"];
+
+        /* =========================
+           MONTH PARSING
+           Handles "2024/09", "2024-09", "September", "Sep 2024" and returns a
+           sortable integer key (year * 12 + monthIndex). Every chronological
+           operation in this file goes through here.
+        ========================= */
+        function parseMonthKey(monthStr, yearFallback) {
+            const raw = String(monthStr || '').trim();
+            let y = null, m = null;
+
+            let match = raw.match(/^(\d{4})[\/\-.](\d{1,2})$/);
+            if (match) { y = +match[1]; m = +match[2]; }
+
+            if (m === null) {
+                match = raw.match(/^(\d{1,2})[\/\-.](\d{4})$/);
+                if (match) { m = +match[1]; y = +match[2]; }
+            }
+
+            if (m === null) {
+                const nameHit = monthNames.findIndex(n =>
+                    new RegExp('^' + n.slice(0, 3), 'i').test(raw));
+                if (nameHit !== -1) {
+                    m = nameHit + 1;
+                    const yearInText = raw.match(/(\d{4})/);
+                    y = yearInText ? +yearInText[1] : null;
+                }
+            }
+
+            if (m === null || m < 1 || m > 12) return null;
+            if (!y) y = parseInt(yearFallback, 10) || new Date().getFullYear();
+
+            return {
+                key: y * 12 + (m - 1),
+                year: y,
+                monthNum: m,
+                label: `${y}/${String(m).padStart(2, '0')}`,
+                shortLabel: `${String(y).slice(2)}-${String(m).padStart(2, '0')}`
+            };
+        }
+
+        function monthKeyToLabel(key) {
+            const y = Math.floor(key / 12);
+            const m = (key % 12) + 1;
+            return `${y}/${String(m).padStart(2, '0')}`;
+        }
+
+        function monthKeyToShort(key) {
+            const y = Math.floor(key / 12);
+            const m = (key % 12) + 1;
+            return `${String(y).slice(2)}-${String(m).padStart(2, '0')}`;
+        }
+
+        /* =========================
+           GROWTH ANALYSIS STATE
+        ========================= */
+        // Rows whose implied CPC exceeds this are treated as brand/sponsorship
+        // buys rather than performance buys. 16 such rows in the current sheet
+        // carry 15% of revenue but 0.2% of clicks.
+        const OUTLIER_CPC_THRESHOLD = 2.0;
+
+        let excludeOutliers = true;        // toggled from the UI
+        let growthMetric = 'cpm';          // which metric the trend chart shows
+        let growthClient = 'ALL';          // scope for the whole growth section
+        let trendView = 'combined';        // combined | clients | both
+        let trendClients = [];             // which clients appear in per-client views
+        let baselineFrom = null, baselineTo = null;
+        let currentFrom = null, currentTo = null;
+        let trendChartInstance = null;
 
         /* =========================
            CALCULATIONS & HELPERS
@@ -606,6 +1167,10 @@
 
             // Populate Comparison Dropdowns as well
             populateComparisonDropdowns(advertisers, years, months);
+
+            // Growth analysis pickers draw from the same data
+            populateGrowthClientDropdown();
+            populateWindowDropdowns();
         }
 
         function applyFilters() {
@@ -631,6 +1196,7 @@
             updateTrendChart();
             updatePeakHighlights();
             renderTable();
+            updateGrowthAnalysis();
         }
 
         function handleFilterChange() {
@@ -682,6 +1248,7 @@
                     grouped[key] = {
                         year: d.year,
                         month: d.month,
+                        sortKey: d.monthKey || 0,
                         impressions: 0,
                         clicks: 0,
                         revenue: 0
@@ -692,13 +1259,9 @@
                 grouped[key].revenue += d.revenue;
             });
 
-            // Sort chronologically
-            const sortedKeys = Object.keys(grouped).sort((a, b) => {
-                const [yA, mA] = a.split(' ');
-                const [yB, mB] = b.split(' ');
-                if (yA !== yB) return Number(yA) - Number(yB);
-                return (monthOrder[mA] || 0) - (monthOrder[mB] || 0);
-            });
+            // Sort chronologically via the parsed month key, not the label
+            const sortedKeys = Object.keys(grouped).sort((a, b) =>
+                (grouped[a].sortKey || 0) - (grouped[b].sortKey || 0));
 
             document.getElementById('dataPointsCount').innerText = `${sortedKeys.length} Time Periods`;
 
@@ -1000,8 +1563,8 @@
                 let valB = b[sortColumn];
 
                 if (sortColumn === 'month') {
-                    valA = monthOrder[a.month] || 0;
-                    valB = monthOrder[b.month] || 0;
+                    valA = a.monthKey || 0;
+                    valB = b.monthKey || 0;
                 }
 
                 if (valA < valB) return sortAsc ? -1 : 1;
@@ -1029,20 +1592,49 @@
 
             const tbody = document.getElementById('tableBody');
             if (paginatedRows.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">No matching campaign logs found</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="px-4 py-8 text-center text-slate-400">No matching campaign logs found</td></tr>`;
             } else {
-                tbody.innerHTML = paginatedRows.map(row => `
+                // One trend lookup per advertiser on the visible page only
+                const trendCache = {};
+                const getTrend = (advertiser) => {
+                    if (!trendCache[advertiser]) {
+                        const series = buildMonthlySeries(
+                            rawData.filter(r => r.advertiser === advertiser), growthMetric);
+                        const values = series.map(s => s.value);
+                        const reg = linearRegression(values);
+                        trendCache[advertiser] = {
+                            values,
+                            months: values.length,
+                            up: values.length > 1 ? reg.slope >= 0 : null
+                        };
+                    }
+                    return trendCache[advertiser];
+                };
+
+                tbody.innerHTML = paginatedRows.map(row => {
+                    const t = getTrend(row.advertiser);
+                    const thin = t.months < 6;
+                    const flag = row.isOutlier
+                        ? `<span title="Implied CPC above A$${OUTLIER_CPC_THRESHOLD} — treated as a brand buy" class="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-semibold align-middle">BRAND</span>`
+                        : '';
+                    const cpcMuted = (row.isOutlier && excludeOutliers)
+                        ? 'text-slate-400 dark:text-slate-500 line-through'
+                        : 'text-emerald-600 dark:text-emerald-400';
+
+                    return `
                     <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
-                        <td class="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">${row.advertiser}</td>
+                        <td class="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">${row.advertiser}${flag}</td>
                         <td class="px-4 py-3">${row.year}</td>
                         <td class="px-4 py-3">${row.month}</td>
                         <td class="px-4 py-3 text-right font-mono">${formatNumber(row.impressions)}</td>
                         <td class="px-4 py-3 text-right font-mono">${formatNumber(row.clicks)}</td>
                         <td class="px-4 py-3 text-right font-semibold text-slate-800 dark:text-slate-100">${formatCurrency(row.revenue)}</td>
                         <td class="px-4 py-3 text-right font-semibold text-brand-600 dark:text-brand-400">${formatCurrency(row.ecpm)}</td>
-                        <td class="px-4 py-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">${formatCurrency(row.ecpc)}</td>
-                    </tr>
-                `).join('');
+                        <td class="px-4 py-3 text-right font-semibold ${cpcMuted}">${formatCurrency(row.ecpc)}</td>
+                        <td class="px-4 py-3 text-center ${thin ? 'opacity-40' : ''}">${sparklineSvg(t.values, t.up)}</td>
+                        <td class="px-4 py-3 text-right font-mono ${thin ? 'text-amber-600 dark:text-amber-500' : 'text-slate-400'}">${t.months}</td>
+                    </tr>`;
+                }).join('');
             }
 
             // Pagination controls update
@@ -1067,35 +1659,1317 @@
             renderTable();
         }
 
+        /* =========================================================
+           GROWTH ANALYSIS ENGINE
+           Pure functions. No DOM access. Every one takes rows in and
+           returns numbers out, so they are testable in isolation.
+        ========================================================= */
+
+        // Backfills monthKey / isOutlier on any rows that came from the
+        // hardcoded demo set rather than through the CSV parser.
+        function normalizeRows(rows) {
+            return rows.map(r => {
+                if (r.monthKey !== undefined) return r;
+                const pm = parseMonthKey(r.month, r.year);
+                const impliedCpc = r.clicks > 0 ? r.revenue / r.clicks : 0;
+                return {
+                    ...r,
+                    monthKey: pm ? pm.key : 0,
+                    monthLabel: pm ? pm.label : r.month,
+                    isOutlier: r.clicks > 0 && impliedCpc > OUTLIER_CPC_THRESHOLD
+                };
+            });
+        }
+
+        // Applies the outlier toggle. CPM stays trustworthy on these rows
+        // (impressions are real), so they are only dropped for CPC work.
+        function activeRows(rows, metric) {
+            if (!excludeOutliers) return rows;
+            if (metric === 'cpm') return rows;
+            return rows.filter(r => !r.isOutlier);
+        }
+
+        // Weighted aggregates. Never average a ratio — sum then divide.
+        function weightedCPM(rows) {
+            const imp = rows.reduce((s, r) => s + r.impressions, 0);
+            if (!imp) return 0;
+            return rows.reduce((s, r) => s + r.revenue, 0) / imp * 1000;
+        }
+
+        function weightedCPC(rows) {
+            const clk = rows.reduce((s, r) => s + r.clicks, 0);
+            if (!clk) return 0;
+            return rows.reduce((s, r) => s + r.revenue, 0) / clk;
+        }
+
+        function metricOf(rows, metric) {
+            return metric === 'cpm' ? weightedCPM(rows) : weightedCPC(rows);
+        }
+
+        // Collapses rows into one entry per calendar month, chronologically.
+        function buildMonthlySeries(rows, metric) {
+            const bucket = {};
+            activeRows(rows, metric).forEach(r => {
+                if (!bucket[r.monthKey]) {
+                    bucket[r.monthKey] = { key: r.monthKey, imp: 0, clk: 0, rev: 0 };
+                }
+                bucket[r.monthKey].imp += r.impressions;
+                bucket[r.monthKey].clk += r.clicks;
+                bucket[r.monthKey].rev += r.revenue;
+            });
+
+            return Object.values(bucket)
+                .sort((a, b) => a.key - b.key)
+                .map(b => ({
+                    key: b.key,
+                    label: monthKeyToShort(b.key),
+                    fullLabel: monthKeyToLabel(b.key),
+                    imp: b.imp,
+                    clk: b.clk,
+                    rev: b.rev,
+                    value: metric === 'cpm'
+                        ? (b.imp ? b.rev / b.imp * 1000 : 0)
+                        : (b.clk ? b.rev / b.clk : 0)
+                }));
+        }
+
+        // Ordinary least squares. Returns slope per month plus r squared,
+        // which the UI uses to say how much to trust the slope.
+        function linearRegression(values) {
+            const n = values.length;
+            if (n < 2) return { slope: 0, intercept: values[0] || 0, r2: 0 };
+
+            const xs = values.map((_, i) => i);
+            const meanX = xs.reduce((a, b) => a + b, 0) / n;
+            const meanY = values.reduce((a, b) => a + b, 0) / n;
+
+            let num = 0, den = 0;
+            for (let i = 0; i < n; i++) {
+                num += (xs[i] - meanX) * (values[i] - meanY);
+                den += (xs[i] - meanX) ** 2;
+            }
+
+            const slope = den === 0 ? 0 : num / den;
+            const intercept = meanY - slope * meanX;
+
+            let ssRes = 0, ssTot = 0;
+            for (let i = 0; i < n; i++) {
+                ssRes += (values[i] - (intercept + slope * xs[i])) ** 2;
+                ssTot += (values[i] - meanY) ** 2;
+            }
+
+            return { slope, intercept, r2: ssTot === 0 ? 0 : 1 - ssRes / ssTot };
+        }
+
+        function median(arr) {
+            if (!arr.length) return 0;
+            const s = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(s.length / 2);
+            return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+        }
+
+        function rollingMedian(values, window = 3) {
+            const half = Math.floor(window / 2);
+            return values.map((_, i) =>
+                median(values.slice(Math.max(0, i - half), Math.min(values.length, i + half + 1)))
+            );
+        }
+
+        function rowsInWindow(rows, fromKey, toKey) {
+            return rows.filter(r => r.monthKey >= fromKey && r.monthKey <= toKey);
+        }
+
+        function pctChange(a, b) {
+            if (!a) return null;
+            return (b / a - 1) * 100;
+        }
+
+        /* ---------------------------------------------------------
+           HEADLINE METRIC 1 — LIKE FOR LIKE (the default headline)
+           Only clients present in BOTH windows. This is the number
+           that survives a client-mix change, so it is the one that
+           reflects what actually happened to prices.
+        --------------------------------------------------------- */
+        function computeLikeForLike(rows, metric) {
+            const pool = activeRows(rows, metric);
+            const baseRows = rowsInWindow(pool, baselineFrom, baselineTo);
+            const currRows = rowsInWindow(pool, currentFrom, currentTo);
+
+            const baseClients = new Set(baseRows.map(r => r.advertiser));
+            const currClients = new Set(currRows.map(r => r.advertiser));
+            const shared = [...baseClients].filter(c => currClients.has(c));
+
+            const bs = baseRows.filter(r => shared.includes(r.advertiser));
+            const cs = currRows.filter(r => shared.includes(r.advertiser));
+
+            const from = metricOf(bs, metric);
+            const to = metricOf(cs, metric);
+
+            return {
+                from, to,
+                abs: to - from,
+                pct: pctChange(from, to),
+                sharedClients: shared.sort(),
+                droppedClients: [...baseClients].filter(c => !currClients.has(c)).sort(),
+                newClients: [...currClients].filter(c => !baseClients.has(c)).sort(),
+                coverage: currRows.length ? cs.length / currRows.length : 0
+            };
+        }
+
+        /* ---------------------------------------------------------
+           HEADLINE METRIC 2 — TREND LINE
+           Slope across every month in range, not just the endpoints.
+        --------------------------------------------------------- */
+        function computeTrend(rows, metric) {
+            const series = buildMonthlySeries(
+                rowsInWindow(rows, baselineFrom, currentTo), metric);
+            if (series.length < 2) return null;
+
+            const values = series.map(s => s.value);
+            const reg = linearRegression(values);
+            const fitStart = reg.intercept;
+            const fitEnd = reg.intercept + reg.slope * (values.length - 1);
+
+            return {
+                series,
+                values,
+                fitted: values.map((_, i) => reg.intercept + reg.slope * i),
+                rolling: rollingMedian(values, 3),
+                slope: reg.slope,
+                r2: reg.r2,
+                from: fitStart,
+                to: fitEnd,
+                abs: fitEnd - fitStart,
+                pct: pctChange(fitStart, fitEnd),
+                months: values.length
+            };
+        }
+
+        /* ---------------------------------------------------------
+           HEADLINE METRIC 3 — BLENDED
+           What the whole book actually did, mix shift included.
+        --------------------------------------------------------- */
+        function computeBlended(rows, metric) {
+            const pool = activeRows(rows, metric);
+            const from = metricOf(rowsInWindow(pool, baselineFrom, baselineTo), metric);
+            const to = metricOf(rowsInWindow(pool, currentFrom, currentTo), metric);
+            return { from, to, abs: to - from, pct: pctChange(from, to) };
+        }
+
+        /* ---------------------------------------------------------
+           RATE vs MIX DECOMPOSITION
+           Splits the blended change into "existing clients pay more"
+           and "different clients are buying". Feeds the bridge chart.
+        --------------------------------------------------------- */
+        function decomposeRateMix(rows, metric) {
+            const pool = activeRows(rows, metric);
+            const denomField = metric === 'cpm' ? 'impressions' : 'clicks';
+            const scale = metric === 'cpm' ? 1000 : 1;
+
+            const summarise = (windowRows) => {
+                const byClient = {};
+                windowRows.forEach(r => {
+                    if (!byClient[r.advertiser]) byClient[r.advertiser] = { den: 0, rev: 0 };
+                    byClient[r.advertiser].den += r[denomField];
+                    byClient[r.advertiser].rev += r.revenue;
+                });
+                const totalDen = Object.values(byClient).reduce((s, v) => s + v.den, 0);
+                return { byClient, totalDen };
+            };
+
+            const A = summarise(rowsInWindow(pool, baselineFrom, baselineTo));
+            const B = summarise(rowsInWindow(pool, currentFrom, currentTo));
+
+            const rateOf = (entry) => entry && entry.den ? entry.rev / entry.den * scale : null;
+
+            let actualA = 0, actualB = 0, counterfactual = 0;
+
+            Object.keys(A.byClient).forEach(c => {
+                const w = A.totalDen ? A.byClient[c].den / A.totalDen : 0;
+                const rA = rateOf(A.byClient[c]) || 0;
+                const rB = rateOf(B.byClient[c]);
+                actualA += rA * w;
+                // Baseline weights, current prices — isolates the rate move
+                counterfactual += (rB === null ? rA : rB) * w;
+            });
+
+            Object.keys(B.byClient).forEach(c => {
+                const w = B.totalDen ? B.byClient[c].den / B.totalDen : 0;
+                actualB += (rateOf(B.byClient[c]) || 0) * w;
+            });
+
+            return {
+                start: actualA,
+                rateEffect: counterfactual - actualA,
+                mixEffect: actualB - counterfactual,
+                end: actualB,
+                total: actualB - actualA
+            };
+        }
+
+        /* ---------------------------------------------------------
+           PER CLIENT GROWTH
+           One row per advertiser. monthsOfData drives the confidence
+           treatment in the UI — a 6 month client is not a 23 month one.
+        --------------------------------------------------------- */
+        function perClientGrowth(rows, metric) {
+            const pool = activeRows(rows, metric);
+            const clients = [...new Set(pool.map(r => r.advertiser))];
+            const out = [];
+
+            clients.forEach(client => {
+                const cRows = pool.filter(r => r.advertiser === client);
+                const series = buildMonthlySeries(cRows, metric);
+                if (series.length < 2) return;
+
+                const baseRows = rowsInWindow(cRows, baselineFrom, baselineTo);
+                const currRows = rowsInWindow(cRows, currentFrom, currentTo);
+
+                const inBoth = baseRows.length > 0 && currRows.length > 0;
+                const from = inBoth ? metricOf(baseRows, metric) : null;
+                const to = inBoth ? metricOf(currRows, metric) : null;
+
+                const reg = linearRegression(series.map(s => s.value));
+
+                out.push({
+                    client,
+                    monthsOfData: series.length,
+                    firstMonth: series[0].fullLabel,
+                    lastMonth: series[series.length - 1].fullLabel,
+                    series: series.map(s => s.value),
+                    from, to,
+                    abs: inBoth ? to - from : null,
+                    pct: inBoth ? pctChange(from, to) : null,
+                    slope: reg.slope,
+                    r2: reg.r2,
+                    inBothWindows: inBoth,
+                    revenue: cRows.reduce((s, r) => s + r.revenue, 0)
+                });
+            });
+
+            return out.sort((a, b) => (b.pct ?? -Infinity) - (a.pct ?? -Infinity));
+        }
+
+        // Rebases each client's series to 100 at its own first month so that
+        // an A$4 CPM client and an A$1 CPM client are shape-comparable.
+        function countOutliers(rows) {
+            const flagged = rows.filter(r => r.isOutlier);
+            const totalRev = rows.reduce((s, r) => s + r.revenue, 0) || 1;
+            const totalClk = rows.reduce((s, r) => s + r.clicks, 0) || 1;
+            return {
+                count: flagged.length,
+                revenueShare: flagged.reduce((s, r) => s + r.revenue, 0) / totalRev * 100,
+                clickShare: flagged.reduce((s, r) => s + r.clicks, 0) / totalClk * 100
+            };
+        }
+
+        /* =========================================================
+           GROWTH ANALYSIS RENDERING
+        ========================================================= */
+
+        const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#4a3aa7'];
+        const INK_MUTED = '#898781';
+        const GRID = 'rgba(137,135,129,0.22)';
+
+        function allMonthKeys() {
+            return [...new Set(rawData.map(r => r.monthKey))].filter(Boolean).sort((a, b) => a - b);
+        }
+
+        function populateWindowDropdowns() {
+            const keys = allMonthKeys();
+            if (!keys.length) return;
+
+            const opts = keys.map(k =>
+                `<option value="${k}">${monthKeyToLabel(k)}</option>`).join('');
+
+            ['baselineFrom', 'baselineTo', 'currentFrom', 'currentTo'].forEach(id => {
+                document.getElementById(id).innerHTML = opts;
+            });
+
+            if (baselineFrom === null || !keys.includes(baselineFrom)) applyDefaultWindows(keys);
+
+            document.getElementById('baselineFrom').value = baselineFrom;
+            document.getElementById('baselineTo').value = baselineTo;
+            document.getElementById('currentFrom').value = currentFrom;
+            document.getElementById('currentTo').value = currentTo;
+        }
+
+        // Default: first 6 months versus last 6 months, or half and half
+        // when there is less than a year of data.
+        function applyDefaultWindows(keys) {
+            const span = Math.max(1, Math.min(6, Math.floor(keys.length / 2)));
+            baselineFrom = keys[0];
+            baselineTo = keys[span - 1];
+            currentFrom = keys[keys.length - span];
+            currentTo = keys[keys.length - 1];
+        }
+
+        function resetWindows() {
+            applyDefaultWindows(allMonthKeys());
+            populateWindowDropdowns();
+            updateGrowthAnalysis();
+        }
+
+        function handleWindowChange() {
+            baselineFrom = +document.getElementById('baselineFrom').value;
+            baselineTo = +document.getElementById('baselineTo').value;
+            currentFrom = +document.getElementById('currentFrom').value;
+            currentTo = +document.getElementById('currentTo').value;
+
+            if (baselineTo < baselineFrom) {
+                baselineTo = baselineFrom;
+                document.getElementById('baselineTo').value = baselineTo;
+            }
+            if (currentTo < currentFrom) {
+                currentTo = currentFrom;
+                document.getElementById('currentTo').value = currentTo;
+            }
+
+            updateGrowthAnalysis();
+        }
+
+        function handleOutlierToggle() {
+            excludeOutliers = document.getElementById('outlierToggle').checked;
+            updateGrowthAnalysis();
+            renderTable();
+        }
+
+        /* ---- Chart client picker ---------------------------------- */
+
+        function trendClientDefaults() {
+            if (!trendClients.length) trendClients = topClientsByRevenue(8);
+            return trendClients;
+        }
+
+        function toggleTrendClientPicker(evt) {
+            if (evt) evt.stopPropagation();
+            const p = document.getElementById('trendClientPanel');
+            p.classList.toggle('hidden');
+            if (!p.classList.contains('hidden')) renderTrendClientList();
+        }
+
+        function renderTrendClientList() {
+            const term = (document.getElementById('trendClientSearch').value || '').toLowerCase();
+
+            const rev = {};
+            rawData.forEach(r => { rev[r.advertiser] = (rev[r.advertiser] || 0) + r.revenue; });
+            const names = Object.keys(rev)
+                .sort((a, b) => rev[b] - rev[a])
+                .filter(n => n.toLowerCase().includes(term));
+
+            document.getElementById('trendClientList').innerHTML = names.length
+                ? names.map(n => {
+                    const on = trendClients.includes(n);
+                    const esc = n.replace(/'/g, "\\'");
+                    return `
+                    <label class="flex items-center gap-2 px-1.5 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer">
+                        <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleTrendClient('${esc}')" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span class="text-xs flex-1 truncate ${on ? 'font-medium text-slate-800 dark:text-slate-200' : 'text-slate-600 dark:text-slate-400'}">${n}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">A$${Math.round(rev[n]).toLocaleString()}</span>
+                        <button onclick="event.preventDefault();event.stopPropagation();trendClientOnly('${esc}')" title="Show only this client" class="text-[10px] px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 hover:text-brand-700 dark:hover:text-brand-300">only</button>
+                    </label>`;
+                }).join('')
+                : '<p class="text-xs text-slate-400 px-1.5 py-2">No clients match that search.</p>';
+        }
+
+        function toggleTrendClient(name) {
+            trendClients = trendClients.includes(name)
+                ? trendClients.filter(c => c !== name)
+                : [...trendClients, name];
+            refreshTrendChart();
+        }
+
+        function trendClientOnly(name) {
+            trendClients = [name];
+            refreshTrendChart();
+        }
+
+        function trendClientPreset(kind) {
+            if (kind === 'none') trendClients = [];
+            else if (kind === 'all') trendClients = topClientsByRevenue(9999);
+            else if (kind === 'one') trendClients = topClientsByRevenue(1);
+            else trendClients = topClientsByRevenue(kind);
+            refreshTrendChart();
+        }
+
+        function refreshTrendChart() {
+            renderTrendClientList();
+            renderGrowthTrendChart(growthSourceRows());
+        }
+
+        function handleTrendViewChange() {
+            trendView = document.getElementById('trendView').value;
+            trendClientDefaults();
+            renderGrowthTrendChart(growthSourceRows());
+        }
+
+        function setGrowthMetric(metric) {
+            growthMetric = metric;
+            const on = 'text-xs px-3 py-1.5 font-medium bg-brand-600 text-white';
+            const off = 'text-xs px-3 py-1.5 font-medium text-slate-600 dark:text-slate-300';
+            document.getElementById('btnMetricCpm').className = metric === 'cpm' ? on : off;
+            document.getElementById('btnMetricCpc').className = metric === 'cpc' ? on : off;
+            updateGrowthAnalysis();
+        }
+
+        // Sign belongs outside the currency symbol: -A$0.002, never A$-0.002
+        function signedAud(v, decimals = 4) {
+            const sign = v < 0 ? '-' : '+';
+            return `${sign}A$${Math.abs(v).toFixed(decimals)}`;
+        }
+
+        function fmtDelta(abs, pct, decimals) {
+            if (pct === null || !isFinite(pct)) return { pct: 'n/a', abs: 'insufficient overlap', up: null };
+            const sign = pct >= 0 ? '+' : '';
+            return {
+                pct: `${sign}${pct.toFixed(1)}%`,
+                abs: `${signedAud(abs)} absolute`,
+                up: pct >= 0
+            };
+        }
+
+        function deltaColor(up) {
+            if (up === null) return 'text-slate-400';
+            return up ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+        }
+
+        function updateGrowthAnalysis() {
+            const rows = growthSourceRows();
+            if (!rows.length || baselineFrom === null) return;
+
+            const single = growthClient !== 'ALL';
+
+            // The month table only makes sense once a single client is chosen.
+            document.getElementById('singleClientPanel').classList.toggle('hidden', !single);
+
+            renderOutlierPanel(rows);
+            renderHeadlineCards(rows);
+            renderGrowthTrendChart(rows);
+
+            if (single) renderSingleClientTable(growthClient);
+
+            renderClientBreakdown();
+            renderMethodDetail();
+        }
+
+        // Runs a calculation under the opposite toggle setting without
+        // disturbing the current one, so the panel can state the cost of
+        // flipping it rather than making the reader flip it to find out.
+        function underToggle(value, fn) {
+            const saved = excludeOutliers;
+            excludeOutliers = value;
+            try { return fn(); } finally { excludeOutliers = saved; }
+        }
+
+        function renderOutlierPanel(rows) {
+            const stats = countOutliers(rows);
+            const flagged = rows.filter(r => r.isOutlier);
+
+            document.getElementById('outlierThreshold').innerText =
+                OUTLIER_CPC_THRESHOLD.toFixed(2);
+            document.getElementById('outlierTitle').innerText = excludeOutliers
+                ? 'Brand-buy rows excluded from CPC'
+                : 'Brand-buy rows currently INCLUDED in CPC';
+
+            document.getElementById('outlierCount').innerText =
+                `${stats.count} of ${rows.length}`;
+            document.getElementById('outlierRev').innerText =
+                `${stats.revenueShare.toFixed(1)}%`;
+            document.getElementById('outlierClk').innerText =
+                `${stats.clickShare.toFixed(2)}%`;
+
+            const worst = flagged.reduce((mx, r) => {
+                const c = r.clicks > 0 ? r.revenue / r.clicks : 0;
+                return c > (mx.cpc || 0) ? { cpc: c, who: r.advertiser, when: r.monthLabel } : mx;
+            }, {});
+            document.getElementById('outlierWorst').innerText = worst.cpc
+                ? `A$${worst.cpc.toFixed(2)}`
+                : 'none';
+            document.getElementById('outlierWorst').title = worst.cpc
+                ? `${worst.who}, ${worst.when} — A$${worst.cpc.toFixed(2)} per click`
+                : '';
+
+            // Same headline metric computed both ways
+            const withOut = underToggle(true,  () => computeLikeForLike(rows, 'cpc'));
+            const within  = underToggle(false, () => computeLikeForLike(rows, 'cpc'));
+
+            const say = (r) => r.pct === null || !isFinite(r.pct)
+                ? 'not measurable' : `${r.pct >= 0 ? '+' : ''}${r.pct.toFixed(1)}%`;
+
+            const gap = (withOut.pct !== null && within.pct !== null)
+                ? Math.abs(within.pct - withOut.pct) : null;
+
+            document.getElementById('outlierImpact').innerHTML = stats.count === 0
+                ? 'No rows in the current selection cross the threshold, so the toggle has no effect.'
+                : `Like-for-like CPC reads <span class="font-semibold">${say(withOut)}</span> with these rows excluded and <span class="font-semibold">${say(within)}</span> with them included` +
+                  (gap !== null
+                    ? ` &mdash; a ${gap.toFixed(1)} point swing driven by ${stats.clickShare.toFixed(2)}% of the clicks.`
+                    : '.');
+
+            const names = [...new Set(flagged.map(r => r.advertiser))].sort();
+            document.getElementById('outlierClients').innerText = names.length
+                ? `${names.join(', ')}.`
+                : 'None in the current selection.';
+        }
+
+        // The growth section owns its own client scope, independent of the
+        // page-level Advertiser filter, so the two controls cannot disagree.
+        function growthSourceRows() {
+            return growthClient === 'ALL'
+                ? rawData
+                : rawData.filter(r => r.advertiser === growthClient);
+        }
+
+        function populateGrowthClientDropdown() {
+            const sel = document.getElementById('growthClient');
+            if (!sel) return;
+
+            // Order by revenue so the clients that matter are near the top
+            const rev = {};
+            rawData.forEach(r => { rev[r.advertiser] = (rev[r.advertiser] || 0) + r.revenue; });
+            const names = Object.keys(rev).sort((a, b) => rev[b] - rev[a]);
+
+            sel.innerHTML = `<option value="ALL">All clients combined</option>` +
+                names.map(n =>
+                    `<option value="${n}">${n} — A$${Math.round(rev[n]).toLocaleString()}</option>`).join('');
+
+            if (!names.includes(growthClient)) growthClient = 'ALL';
+            sel.value = growthClient;
+        }
+
+        function handleGrowthClientChange() {
+            growthClient = document.getElementById('growthClient').value;
+            updateGrowthAnalysis();
+        }
+
+        function setGrowthClient(name) {
+            growthClient = name;
+            const sel = document.getElementById('growthClient');
+            if (sel) sel.value = name;
+            updateGrowthAnalysis();
+            document.getElementById('growthClient')
+                .scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function renderClientBreakdown() {
+            const cpm = perClientGrowth(rawData, 'cpm');
+            const cpc = perClientGrowth(rawData, 'cpc');
+            const cpcBy = {}; cpc.forEach(c => { cpcBy[c.client] = c; });
+
+            const merged = cpm.map(m => ({
+                client: m.client,
+                months: m.monthsOfData,
+                revenue: m.revenue,
+                cpmFrom: m.from, cpmTo: m.to, cpmPct: m.pct,
+                cpcFrom: cpcBy[m.client] ? cpcBy[m.client].from : null,
+                cpcTo:   cpcBy[m.client] ? cpcBy[m.client].to   : null,
+                cpcPct:  cpcBy[m.client] ? cpcBy[m.client].pct  : null,
+                inBoth: m.inBothWindows
+            }));
+
+            const key = document.getElementById('breakdownSort').value;
+            merged.sort((a, b) => {
+                if (key === 'client') return a.client.localeCompare(b.client);
+                const av = a[key], bv = b[key];
+                if (av === null && bv === null) return 0;
+                if (av === null) return 1;
+                if (bv === null) return -1;
+                return bv - av;
+            });
+
+            const cell = (v, d = 4) => v === null ? '<span class="text-slate-400">—</span>' : 'A$' + v.toFixed(d);
+            const pctCell = (p) => {
+                if (p === null || !isFinite(p)) return '<span class="text-slate-400">—</span>';
+                const cls = p >= 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400';
+                return `<span class="font-semibold ${cls}">${p >= 0 ? '+' : ''}${p.toFixed(1)}%</span>`;
+            };
+
+            document.getElementById('breakdownBody').innerHTML = merged.map(r => {
+                const thin = r.months < 6;
+                const faded = r.inBoth ? '' : 'opacity-50';
+                return `
+                <tr onclick="setGrowthClient('${r.client.replace(/'/g, "\\'")}')"
+                    class="cursor-pointer hover:bg-brand-50 dark:hover:bg-slate-700/50 transition ${faded}">
+                    <td class="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200">${r.client}${
+                        r.inBoth ? '' : '<span class="ml-1.5 text-[9px] px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">NOT IN BOTH</span>'}</td>
+                    <td class="px-3 py-2.5 text-right font-mono ${thin ? 'text-amber-600 dark:text-amber-500' : ''}">${r.months}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${cell(r.cpmFrom)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${cell(r.cpmTo)}</td>
+                    <td class="px-3 py-2.5 text-right">${pctCell(r.cpmPct)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${cell(r.cpcFrom)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${cell(r.cpcTo)}</td>
+                    <td class="px-3 py-2.5 text-right">${pctCell(r.cpcPct)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">A$${Math.round(r.revenue).toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+
+            const both = merged.filter(r => r.inBoth).length;
+            const totalClients = new Set(rawData.map(r => r.advertiser)).size;
+            const singleMonth = totalClients - merged.length;
+
+            document.getElementById('breakdownNote').innerText =
+                `${totalClients} clients in the sheet. ${merged.length} have at least two months and are listed` +
+                (singleMonth ? `; ${singleMonth} have a single month only and are omitted, since one point cannot show a change` : '') +
+                `. Of those listed, ${both} appear in both windows and can be compared — the rest are dimmed because they arrived or left partway through, so a percentage change would have nothing to measure against.`;
+        }
+
+        function renderSingleClientTable(client) {
+            const rows = rawData.filter(r => r.advertiser === client);
+            const series = buildMonthlySeries(rows, 'cpm');
+            const cpcSeries = buildMonthlySeries(rows, 'cpc');
+            const cpcBy = {}; cpcSeries.forEach(s => { cpcBy[s.key] = s.value; });
+
+            document.getElementById('singleClientTitle').innerText =
+                `${client} — month by month`;
+
+            document.getElementById('singleClientBody').innerHTML = series.map(s => {
+                const inBase = s.key >= baselineFrom && s.key <= baselineTo;
+                const inCurr = s.key >= currentFrom && s.key <= currentTo;
+                const tint = inBase ? 'bg-slate-50 dark:bg-slate-900/40'
+                           : inCurr ? 'bg-brand-50/60 dark:bg-brand-900/20' : '';
+                const tag = inBase ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">baseline</span>'
+                          : inCurr ? '<span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300">current</span>'
+                          : '<span class="text-slate-300 dark:text-slate-600">—</span>';
+                return `
+                <tr class="${tint}">
+                    <td class="px-3 py-2.5 font-medium text-slate-800 dark:text-slate-200">${s.fullLabel}</td>
+                    <td class="px-3 py-2.5">${tag}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${formatNumber(s.imp)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">${formatNumber(s.clk)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono">A$${s.rev.toFixed(2)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono text-brand-600 dark:text-brand-400">A$${s.value.toFixed(4)}</td>
+                    <td class="px-3 py-2.5 text-right font-mono text-emerald-600 dark:text-emerald-400">${
+                        cpcBy[s.key] !== undefined ? 'A$' + cpcBy[s.key].toFixed(4) : '<span class="text-slate-400">—</span>'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        /* =========================================================
+           METHOD EXPLAINERS
+           Each card opens a panel describing what it measures, which
+           rows it touched, and when it should not be trusted. Figures
+           are recomputed live so the explanation always matches the
+           number sitting above it.
+        ========================================================= */
+        let openMethod = null;
+
+        function toggleMethodDetail(key) {
+            openMethod = (openMethod === key) ? null : key;
+            renderMethodDetail();
+        }
+
+        function renderMethodDetail() {
+            const panel = document.getElementById('methodDetail');
+            if (!panel) return;
+
+            ['lfl', 'trend', 'blended'].forEach(k => {
+                const card = document.getElementById('card' + k.charAt(0).toUpperCase() + k.slice(1));
+                if (card) card.setAttribute('aria-expanded', String(openMethod === k));
+            });
+
+            if (!openMethod) { panel.classList.add('hidden'); return; }
+
+            panel.classList.remove('hidden');
+            panel.innerHTML = methodDetailHtml(openMethod, growthSourceRows());
+            renderIcons();
+        }
+
+        function methodDetailHtml(key, rows) {
+            const baseRows = rowsInWindow(rows, baselineFrom, baselineTo);
+            const currRows = rowsInWindow(rows, currentFrom, currentTo);
+            const bw = `${monthKeyToLabel(baselineFrom)} to ${monthKeyToLabel(baselineTo)}`;
+            const cw = `${monthKeyToLabel(currentFrom)} to ${monthKeyToLabel(currentTo)}`;
+            const scope = growthClient === 'ALL' ? 'all clients' : growthClient;
+
+            const shell = (title, icon, body) => `
+                <div class="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i data-lucide="${icon}" class="w-4 h-4 text-brand-600"></i>${title}
+                    </h4>
+                    <button onclick="toggleMethodDetail('${key}')" aria-label="Close" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>${body}`;
+
+            const block = (heading, inner) => `
+                <div class="mb-4">
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">${heading}</p>
+                    <div class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-1.5">${inner}</div>
+                </div>`;
+
+            const formula = (f) => `<p class="font-mono text-[11px] bg-slate-100 dark:bg-slate-900 rounded px-2.5 py-1.5 inline-block text-slate-800 dark:text-slate-200">${f}</p>`;
+
+            const warn = (text) => `
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg px-3 py-2.5">
+                    <p class="text-xs text-amber-900 dark:text-amber-200"><span class="font-semibold">Where it misleads.</span> ${text}</p>
+                </div>`;
+
+            if (key === 'trend') {
+                const t = computeTrend(rows, growthMetric);
+                if (!t) return shell('Trend line', 'trending-up', '<p class="text-xs">Not enough months in range to fit a line.</p>');
+
+                const conf = t.r2 >= 0.5 ? 'strong' : t.r2 >= 0.25 ? 'moderate' : 'weak';
+                const pctNoise = ((1 - t.r2) * 100).toFixed(0);
+
+                return shell('Trend line', 'trending-up',
+                    block('What it measures',
+                        `<p>The underlying direction of ${growthMetric.toUpperCase()} across the whole period, ignoring how any single month behaved. It fits one straight line through every monthly point using ordinary least squares, then reports where that line starts and ends.</p>` +
+                        formula('slope × months elapsed = total change')) +
+                    block('Data it used',
+                        `<p><span class="font-semibold">${t.months} monthly points</span> covering ${monthKeyToLabel(t.series[0].key)} to ${monthKeyToLabel(t.series[t.series.length - 1].key)}, scope ${scope}. Each point is that month's revenue divided by its ${growthMetric === 'cpm' ? 'impressions' : 'clicks'}, not an average of per-client rates.</p>
+                         <p>Fitted line runs A$${t.from.toFixed(4)} → A$${t.to.toFixed(4)}, moving ${signedAud(t.slope, 5)} per month.</p>`) +
+                    block('Why you need it',
+                        `<p>Comparing one month against another month rests the entire answer on two data points, and either can be a fluke. Your 2025/01 has A$1,807 of revenue while 2026/03 has A$38,602 — pick the wrong pair and you can produce almost any percentage you like.</p>
+                         <p>The trend line cannot be gamed that way. Every month pulls on it, so a single unusual month bends it slightly instead of defining it. This is the figure to quote when someone asks which way things are heading.</p>`) +
+                    block('How much to trust it now',
+                        `<p>r² is <span class="font-semibold">${t.r2.toFixed(2)}</span> (${conf}). That means the straight line explains ${(t.r2 * 100).toFixed(0)}% of what ${growthMetric.toUpperCase()} actually did; the other ${pctNoise}% is scatter the line does not capture.</p>`) +
+                    warn(t.r2 < 0.25
+                        ? `At r² ${t.r2.toFixed(2)} this line is mostly describing noise. The data is too volatile for a straight line to summarise, so treat the ${t.pct === null ? '' : t.pct.toFixed(1) + '%'} as unreliable and read the rolling median in the chart below instead.`
+                        : `A straight line assumes steady change. If your rates jumped once and then held flat, the line will spread that single step across every month and overstate the ongoing movement. Check the chart shape before quoting the slope.`));
+            }
+
+            if (key === 'blended') {
+                const b = computeBlended(rows, growthMetric);
+                const d = decomposeRateMix(rows, growthMetric);
+                const den = growthMetric === 'cpm' ? 'impressions' : 'clicks';
+                const baseClients = new Set(baseRows.map(r => r.advertiser)).size;
+                const currClients = new Set(currRows.map(r => r.advertiser)).size;
+                const baseRev = baseRows.reduce((s, r) => s + r.revenue, 0);
+                const currRev = currRows.reduce((s, r) => s + r.revenue, 0);
+                const mixDominates = Math.abs(d.mixEffect) > Math.abs(d.rateEffect);
+
+                return shell('Blended', 'layers',
+                    block('What it measures',
+                        `<p>What your book actually earned per ${growthMetric === 'cpm' ? 'thousand impressions' : 'click'} in each window, everyone pooled together. Nothing is held back and no client is weighted equally — a client with ten times the volume pulls ten times as hard.</p>` +
+                        formula(`total revenue ÷ total ${den}${growthMetric === 'cpm' ? ' × 1000' : ''}`)) +
+                    block('Data it used',
+                        `<p><span class="font-semibold">Baseline ${bw}</span> — ${baseClients} clients, ${baseRows.length} rows, A$${Math.round(baseRev).toLocaleString()} revenue → A$${b.from.toFixed(4)}</p>
+                         <p><span class="font-semibold">Current ${cw}</span> — ${currClients} clients, ${currRows.length} rows, A$${Math.round(currRev).toLocaleString()} revenue → A$${b.to.toFixed(4)}</p>
+                         <p>Scope ${scope}. Every row in both windows counts, including clients present in only one of them.</p>`) +
+                    block('Why you need it',
+                        `<p>This is the only one of the three that describes reality without editing it. Like-for-like throws away every client who arrived or left, which here means discarding roughly half your revenue. Blended keeps all of it.</p>
+                         <p>Use it for your own P&L, forecasting, and any question of the form "what is this book actually yielding?" It is the truthful answer to that question, just not to the question of what happened to prices.</p>`) +
+                    block('Rate versus mix, right now',
+                        `<p>Of the ${signedAud(d.total)} total move, ${signedAud(d.rateEffect)} came from price changes and ${signedAud(d.mixEffect)} from the client mix shifting.</p>`) +
+                    warn(mixDominates
+                        ? `Mix is currently the bigger force here, which is exactly when this number becomes dangerous to quote. It can point the opposite way to what every individual client experienced. Never send this figure to a client as their rate.`
+                        : `Blended mixes two effects that have nothing to do with each other: what you charge, and who is buying. Winning one large cheap client can drag it down in a period where you raised every price.`));
+            }
+
+            const l = computeLikeForLike(rows, growthMetric);
+            const sharedRev = currRows
+                .filter(r => l.sharedClients.includes(r.advertiser))
+                .reduce((s, r) => s + r.revenue, 0);
+            const totalRev = currRows.reduce((s, r) => s + r.revenue, 0) || 1;
+
+            return shell('Like for like', 'target',
+                block('What it measures',
+                    `<p>The change in ${growthMetric.toUpperCase()} for clients who were present in both windows, so the comparison holds the cast of characters fixed. Anyone who arrived or left is set aside entirely.</p>` +
+                    formula(`shared-client revenue ÷ shared-client ${growthMetric === 'cpm' ? 'impressions × 1000' : 'clicks'}`)) +
+                block('Data it used',
+                    growthClient === 'ALL'
+                        ? `<p><span class="font-semibold">${l.sharedClients.length} shared clients:</span> ${l.sharedClients.join(', ') || 'none'}</p>
+                           <p><span class="font-semibold">Set aside —</span> ${l.newClients.length} arrived after baseline, ${l.droppedClients.length} left before the current window.</p>
+                           <p>Covers A$${Math.round(sharedRev).toLocaleString()} of A$${Math.round(totalRev).toLocaleString()} current-window revenue (${(sharedRev / totalRev * 100).toFixed(0)}%).</p>`
+                        : `<p>Scope is ${growthClient} alone, so this is simply their baseline rate against their current rate. With one client there is no mix to remove.</p>`) +
+                block('Why it is the headline',
+                    `<p>It answers the question a client actually asks: did my rate change? Blended cannot answer that, because it moves when your other clients change even if this client did nothing.</p>
+                     <p>In your data the two disagree in direction on CPC. Blended says down, like-for-like says up. Quoting blended would tell a client their price fell when it rose.</p>`) +
+                warn(`It is deliberately blind to growth. A period where you won ten profitable new clients looks identical to a period where you won none, because new clients are excluded by construction. It measures pricing, never the business.`));
+        }
+
+        function renderHeadlineCards(rows) {
+            const lflCpm = computeLikeForLike(rows, 'cpm');
+            const lflCpc = computeLikeForLike(rows, 'cpc');
+
+            const setPair = (pctId, absId, res) => {
+                const f = fmtDelta(res.abs, res.pct);
+                const el = document.getElementById(pctId);
+                el.innerText = f.pct;
+                el.className = `text-2xl font-bold leading-tight ${deltaColor(f.up)}`;
+                document.getElementById(absId).innerText =
+                    res.pct === null ? f.abs
+                    : `A$${res.from.toFixed(4)} → A$${res.to.toFixed(4)}`;
+            };
+
+            setPair('lflCpmPct', 'lflCpmAbs', lflCpm);
+            setPair('lflCpcPct', 'lflCpcAbs', lflCpc);
+
+            const scopeLabel = document.getElementById('lflScopeLabel');
+            if (growthClient === 'ALL') {
+                if (scopeLabel) scopeLabel.innerText = 'Same clients in both windows';
+                document.getElementById('lflCohort').innerText =
+                    `${lflCpm.sharedClients.length} shared clients · ${lflCpm.newClients.length} new · ${lflCpm.droppedClients.length} churned · ${(lflCpm.coverage * 100).toFixed(0)}% of current-window rows`;
+            } else {
+                if (scopeLabel) scopeLabel.innerText = growthClient + ' only';
+                const cRows = rawData.filter(r => r.advertiser === growthClient);
+                const months = buildMonthlySeries(cRows, 'cpm');
+                document.getElementById('lflCohort').innerText = months.length
+                    ? `${months.length} months on record, ${months[0].fullLabel} to ${months[months.length - 1].fullLabel}` +
+                      (lflCpm.pct === null ? ' · not present in both windows, so no comparison is possible' : '')
+                    : 'No data for this client.';
+            }
+
+            const trendCpm = computeTrend(rows, 'cpm');
+            const trendCpc = computeTrend(rows, 'cpc');
+
+            const setTrend = (valId, subId, t) => {
+                if (!t) {
+                    document.getElementById(valId).innerText = 'n/a';
+                    document.getElementById(subId).innerText = 'not enough months';
+                    return;
+                }
+                const f = fmtDelta(t.abs, t.pct);
+                const el = document.getElementById(valId);
+                el.innerText = f.pct;
+                el.className = `text-lg font-bold ${deltaColor(f.up)}`;
+                const confidence = t.r2 >= 0.5 ? 'strong' : t.r2 >= 0.25 ? 'moderate' : 'weak';
+                document.getElementById(subId).innerText =
+                    `${signedAud(t.slope, 5)}/mo · r² ${t.r2.toFixed(2)} (${confidence})`;
+            };
+
+            setTrend('trendCpm', 'trendCpmSub', trendCpm);
+            setTrend('trendCpc', 'trendCpcSub', trendCpc);
+
+            const blendCpm = computeBlended(rows, 'cpm');
+            const blendCpc = computeBlended(rows, 'cpc');
+
+            const setBlend = (valId, subId, b) => {
+                const f = fmtDelta(b.abs, b.pct);
+                const el = document.getElementById(valId);
+                el.innerText = f.pct;
+                el.className = `text-lg font-bold ${deltaColor(f.up)}`;
+                document.getElementById(subId).innerText =
+                    `A$${b.from.toFixed(4)} → A$${b.to.toFixed(4)}`;
+            };
+
+            setBlend('blendCpm', 'blendCpmSub', blendCpm);
+            setBlend('blendCpc', 'blendCpcSub', blendCpc);
+
+            // Flag Simpson's paradox: blended and like-for-like disagreeing in
+            // direction is the single most misreportable thing in this data.
+            const note = document.getElementById('divergenceNote');
+            const flips = [];
+            if (lflCpc.pct !== null && blendCpc.pct !== null &&
+                Math.sign(lflCpc.pct) !== Math.sign(blendCpc.pct)) flips.push('CPC');
+            if (lflCpm.pct !== null && blendCpm.pct !== null &&
+                Math.sign(lflCpm.pct) !== Math.sign(blendCpm.pct)) flips.push('CPM');
+
+            if (flips.length) {
+                note.classList.remove('hidden');
+                note.querySelector('p').innerText =
+                    `Direction conflict on ${flips.join(' and ')}. The blended figure points the opposite way to like-for-like because the client mix changed between windows. Quote the like-for-like number to clients — the blended one describes the book, not their price.`;
+            } else {
+                note.classList.add('hidden');
+            }
+        }
+
+        // Aligns one client's monthly values onto a shared month axis,
+        // leaving gaps where that client had no activity.
+        function alignedClientSeries(client, metric, keys) {
+            const s = buildMonthlySeries(rawData.filter(r => r.advertiser === client), metric);
+            const by = {};
+            s.forEach(p => { by[p.key] = p.value; });
+            return keys.map(k => (by[k] === undefined ? null : by[k]));
+        }
+
+        function topClientsByRevenue(limit) {
+            const rev = {};
+            rawData.forEach(r => { rev[r.advertiser] = (rev[r.advertiser] || 0) + r.revenue; });
+            return Object.keys(rev).sort((a, b) => rev[b] - rev[a]).slice(0, limit);
+        }
+
+        function renderGrowthTrendChart(rows) {
+            const ctx = document.getElementById('growthTrendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+
+            const t = computeTrend(rows, growthMetric);
+            if (!t) return;
+
+            const label = growthMetric.toUpperCase();
+            const keys = t.series.map(s => s.key);
+            const labels = t.series.map(s => s.label);
+            const single = growthClient !== 'ALL';
+            const note = document.getElementById('trendViewNote');
+
+            // Per-client lines only make sense when the scope is everyone
+            const showPicker = !single && trendView !== 'combined';
+            document.getElementById('trendTopNWrap').style.display = showPicker ? '' : 'none';
+            if (showPicker) {
+                trendClientDefaults();
+                document.getElementById('trendClientBtnLabel').innerText =
+                    trendClients.length === 1 ? trendClients[0]
+                    : trendClients.length + ' selected';
+            }
+
+            // Fits a trend and median to one client's own points, then places
+            // them back on the shared month axis so gaps stay visible.
+            const overlaysFor = (client) => {
+                const cs = buildMonthlySeries(rawData.filter(r => r.advertiser === client), growthMetric);
+                if (cs.length < 2) return [];
+                const vals = cs.map(p => p.value);
+                const reg = linearRegression(vals);
+                const med = rollingMedian(vals, 3);
+                const pos = {}; cs.forEach((p, i) => { pos[p.key] = i; });
+                return [
+                    {
+                        label: client + ' trend',
+                        data: keys.map(k => pos[k] === undefined ? null : reg.intercept + reg.slope * pos[k]),
+                        borderColor: SERIES[0], borderWidth: 2.5, pointRadius: 0,
+                        fill: false, spanGaps: true, order: 1
+                    },
+                    {
+                        label: client + ' rolling median',
+                        data: keys.map(k => pos[k] === undefined ? null : med[pos[k]]),
+                        borderColor: SERIES[1], borderWidth: 2, borderDash: [6, 4],
+                        pointRadius: 0, fill: false, spanGaps: true, tension: 0.3, order: 1
+                    }
+                ];
+            };
+
+            const combinedName = single ? growthClient : 'All clients';
+
+            const combinedSet = {
+                label: combinedName,
+                data: t.values,
+                borderColor: single ? SERIES[0] : INK_MUTED,
+                backgroundColor: single ? 'rgba(42,120,214,0.10)' : 'rgba(137,135,129,0.10)',
+                borderWidth: 2,
+                pointRadius: 2,
+                fill: trendView === 'combined',
+                tension: 0.25,
+                order: 0
+            };
+
+            const trendSet = {
+                label: 'Trend line',
+                data: t.fitted,
+                borderColor: SERIES[0],
+                borderWidth: 2.5,
+                pointRadius: 0,
+                fill: false,
+                order: 0
+            };
+
+            const medianSet = {
+                label: '3-month rolling median',
+                data: t.rolling,
+                borderColor: SERIES[1],
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0.3,
+                order: 0
+            };
+
+            let datasets;
+
+            if (single) {
+                // One client, with the whole book behind it for context
+                const allSeries = buildMonthlySeries(rawData, growthMetric);
+                const byKey = {};
+                allSeries.forEach(p => { byKey[p.key] = p.value; });
+                datasets = [
+                    combinedSet, trendSet, medianSet,
+                    {
+                        label: 'All clients (reference)',
+                        data: keys.map(k => (byKey[k] === undefined ? null : byKey[k])),
+                        borderColor: INK_MUTED,
+                        borderWidth: 1.5,
+                        borderDash: [2, 3],
+                        pointRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        order: 5
+                    }
+                ];
+                note.innerText = `${growthClient} against the combined book. Trend and median describe ${growthClient} only.`;
+
+            } else if (trendView === 'clients') {
+                const names = trendClients;
+
+                if (names.length === 0) {
+                    datasets = [];
+                    note.innerText = 'No clients selected. Use the picker to choose who appears.';
+
+                } else if (names.length === 1) {
+                    const only = names[0];
+                    datasets = [
+                        {
+                            label: only,
+                            data: alignedClientSeries(only, growthMetric, keys),
+                            borderColor: INK_MUTED,
+                            backgroundColor: 'rgba(137,135,129,0.10)',
+                            borderWidth: 1.5, pointRadius: 2, fill: true,
+                            spanGaps: true, tension: 0.25, order: 0
+                        },
+                        ...overlaysFor(only)
+                    ];
+                    const t1 = computeTrend(rawData.filter(r => r.advertiser === only), growthMetric);
+                    note.innerText = t1
+                        ? `${only} alone, with its own trend line and rolling median. Trend moves ${signedAud(t1.slope, 5)} per month, r² ${t1.r2.toFixed(2)}.`
+                        : `${only} alone. Not enough months to fit a trend.`;
+
+                } else {
+                    datasets = names.map((n, i) => ({
+                        label: n,
+                        data: alignedClientSeries(n, growthMetric, keys),
+                        borderColor: SERIES[i % SERIES.length],
+                        borderWidth: 2,
+                        borderDash: i >= SERIES.length ? [5, 3] : [],
+                        pointRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        tension: 0.25
+                    }));
+                    note.innerText = `${names.length} clients plotted separately. Gaps are months with no activity. Select a single client to see its trend line and median.`;
+                }
+
+            } else if (trendView === 'both') {
+                const names = trendClients;
+                datasets = [
+                    { ...combinedSet, borderColor: '#0b0b0b', borderWidth: 3, fill: false },
+                    trendSet,
+                    ...names.map((n, i) => ({
+                        label: n,
+                        data: alignedClientSeries(n, growthMetric, keys),
+                        borderColor: SERIES[i % SERIES.length] + '80',
+                        borderWidth: 1.25,
+                        pointRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        tension: 0.25,
+                        order: 9
+                    }))
+                ];
+                note.innerText = `Combined book in black over ${names.length} individual clients. Lines far from the black one are the clients pulling your average around.`;
+
+            } else {
+                datasets = [combinedSet, trendSet, medianSet];
+                note.innerText = 'Every client pooled into one monthly series.';
+            }
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    onClick: (evt, els) => {
+                        if (!els.length) return;
+                        const name = trendChartInstance.data.datasets[els[0].datasetIndex].label;
+                        const known = new Set(rawData.map(r => r.advertiser));
+                        if (known.has(name)) setGrowthClient(name);
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 10, boxHeight: 10, usePointStyle: false,
+                                font: { size: 11 }, color: INK_MUTED, padding: 8
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: c => c.parsed.y === null ? null
+                                    : `${c.dataset.label}: A$${c.parsed.y.toFixed(4)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: GRID },
+                            ticks: { color: INK_MUTED, font: { size: 11 }, callback: v => 'A$' + v.toFixed(2) },
+                            title: { display: true, text: label + ' (AUD)', color: INK_MUTED, font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: INK_MUTED, font: { size: 10 }, autoSkip: true, maxRotation: 45 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function sparklineSvg(values, up) {
+            if (!values || values.length < 2) return '';
+            const w = 60, h = 18, pad = 2;
+            const min = Math.min(...values), max = Math.max(...values);
+            const range = max - min || 1;
+            const pts = values.map((v, i) => {
+                const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+                const y = h - pad - ((v - min) / range) * (h - pad * 2);
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            }).join(' ');
+            const stroke = up === null ? '#898781' : (up ? '#e34948' : '#1baf7a');
+            return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" class="inline-block align-middle"><polyline points="${pts}" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+        }
+
+        function exportGrowthCSV() {
+            const rows = growthSourceRows();
+            if (!rows.length) return;
+
+            const windowLabel = `${monthKeyToLabel(baselineFrom)}-${monthKeyToLabel(baselineTo)} vs ${monthKeyToLabel(currentFrom)}-${monthKeyToLabel(currentTo)}`;
+            const lines = [
+                ['Growth analysis', windowLabel],
+                ['Outliers excluded from CPC', excludeOutliers ? 'yes' : 'no'],
+                [],
+                ['Scope', 'Metric', 'Method', 'From', 'To', 'Absolute change', 'Percent change', 'Months of data']
+            ];
+
+            ['cpm', 'cpc'].forEach(metric => {
+                const lfl = computeLikeForLike(rows, metric);
+                const trend = computeTrend(rows, metric);
+                const blend = computeBlended(rows, metric);
+
+                lines.push(['Overall', metric.toUpperCase(), 'Like for like',
+                    lfl.from.toFixed(6), lfl.to.toFixed(6), lfl.abs.toFixed(6),
+                    lfl.pct === null ? '' : lfl.pct.toFixed(2), lfl.sharedClients.length + ' clients']);
+
+                if (trend) {
+                    lines.push(['Overall', metric.toUpperCase(), 'Trend line',
+                        trend.from.toFixed(6), trend.to.toFixed(6), trend.abs.toFixed(6),
+                        trend.pct === null ? '' : trend.pct.toFixed(2), trend.months]);
+                }
+
+                lines.push(['Overall', metric.toUpperCase(), 'Blended',
+                    blend.from.toFixed(6), blend.to.toFixed(6), blend.abs.toFixed(6),
+                    blend.pct === null ? '' : blend.pct.toFixed(2), '']);
+
+                const d = decomposeRateMix(rows, metric);
+                lines.push(['Overall', metric.toUpperCase(), 'Price effect', '', '', d.rateEffect.toFixed(6), '', '']);
+                lines.push(['Overall', metric.toUpperCase(), 'Mix effect', '', '', d.mixEffect.toFixed(6), '', '']);
+
+                perClientGrowth(rows, metric).forEach(c => {
+                    lines.push([c.client, metric.toUpperCase(), 'Like for like',
+                        c.from === null ? '' : c.from.toFixed(6),
+                        c.to === null ? '' : c.to.toFixed(6),
+                        c.abs === null ? '' : c.abs.toFixed(6),
+                        c.pct === null ? '' : c.pct.toFixed(2),
+                        c.monthsOfData]);
+                });
+            });
+
+            const csv = lines.map(r => r.map(v => `"${String(v ?? '')}"`).join(',')).join('\n');
+            const link = document.createElement('a');
+            link.setAttribute('href', encodeURI('data:text/csv;charset=utf-8,' + csv));
+            link.setAttribute('download', `DV360_Growth_Analysis_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         /* =========================
            CSV IMPORT & LIVE FETCH
         ========================= */
-        async function fetchLiveSheetData() {
-            const statusElem = document.getElementById('sheetSyncStatus');
-            if (statusElem) {
-                statusElem.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i> <span>Fetching Sheet...</span>`;
-                if (window.lucide) lucide.createIcons();
+        const SHEET_CACHE_KEY = 'dv360_last_good_csv';
+        const SHEET_CACHE_TIME = 'dv360_last_good_at';
+
+        function setSyncStatus(tone, icon, text, title) {
+            const el = document.getElementById('sheetSyncStatus');
+            if (!el) return;
+            const tones = {
+                busy:  'border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300',
+                good:  'border-emerald-200 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
+                stale: 'border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300',
+                bad:   'border-rose-200 dark:border-rose-800/80 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300'
+            };
+            el.className = `inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border cursor-pointer ${tones[tone]}`;
+            el.title = title || 'Click to retry';
+            el.onclick = fetchLiveSheetData;
+            el.innerHTML = icon
+                ? `<i data-lucide="${icon}" class="w-3.5 h-3.5"></i> <span>${text}</span>`
+                : `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>${text}</span>`;
+            renderIcons();
+        }
+
+        // "Failed to fetch" hides the reason for security reasons. A no-cors
+        // probe distinguishes the two cases that matter: if an opaque response
+        // comes back, the network reached Google and CORS is the blocker. If
+        // even that throws, the request never left the machine.
+        async function diagnoseFetchFailure() {
+            if (location.protocol === 'file:') {
+                return 'The page is open from a file:// path. Browsers give local files a null origin and block all cross-origin requests. Serve it over http instead — "npx serve ." in this folder, or use the Vercel deployment.';
             }
+            try {
+                await fetch(LIVE_SHEET_URL, { mode: 'no-cors', cache: 'no-store' });
+                return 'The network reached Google but the browser blocked the response, so this is CORS or an extension. Check for an ad blocker or privacy extension on this page, and confirm the sheet is still published via File > Share > Publish to web.';
+            } catch (probeErr) {
+                return 'The request never left the browser. Something is blocking it entirely — an extension, a corporate proxy, a firewall, or no connectivity to googleusercontent.com.';
+            }
+        }
+
+        async function fetchLiveSheetData() {
+            setSyncStatus('busy', 'refresh-cw', 'Syncing sheet...');
+
+            // 15s ceiling so a hanging request cannot leave the chip spinning
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 15000);
 
             try {
-                const response = await fetch(LIVE_SHEET_URL, { cache: "no-cache" });
-                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-                
-                const csvText = await response.text();
-                const success = processCsvContent(csvText, true);
+                const response = await fetch(LIVE_SHEET_URL, {
+                    cache: 'no-store',
+                    redirect: 'follow',
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
 
-                if (success && statusElem) {
-                    statusElem.className = "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300";
-                    statusElem.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> <span>Live Sheet Connected</span>`;
+                if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
+
+                const csvText = await response.text();
+
+                // A login or error page returns 200 with HTML, not CSV
+                if (/^\s*</.test(csvText)) {
+                    throw new Error('Server returned HTML, not CSV. The sheet is probably no longer published.');
                 }
+
+                if (!processCsvContent(csvText, true)) {
+                    throw new Error('CSV downloaded but no valid rows parsed. Check the column headers.');
+                }
+
+                try {
+                    localStorage.setItem(SHEET_CACHE_KEY, csvText);
+                    localStorage.setItem(SHEET_CACHE_TIME, new Date().toISOString());
+                } catch (e) { /* private mode or quota — cache is optional */ }
+
+                setSyncStatus('good', null, 'Live sheet connected',
+                    'Synced ' + new Date().toLocaleTimeString());
+
             } catch (err) {
-                console.warn("Live Google Sheet fetch failed or was blocked by network. Using fallback demo data.", err);
-                if (statusElem) {
-                    statusElem.className = "inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300";
-                    statusElem.innerHTML = `<i data-lucide="wifi-off" class="w-3.5 h-3.5"></i> <span>Offline Demo Data</span>`;
+                clearTimeout(timer);
+
+                const reason = err.name === 'AbortError'
+                    ? 'The request timed out after 15 seconds.'
+                    : await diagnoseFetchFailure();
+
+                console.warn(
+                    'Live sheet sync failed.\n' +
+                    'Raw error: ' + err.message + '\n' +
+                    'Likely cause: ' + reason + '\n' +
+                    'Meanwhile you can load the CSV by hand with the Import CSV / Sheet button.'
+                );
+
+                // Prefer the last real sync over demo numbers. Showing plausible
+                // fake data in a client reporting tool is worse than showing none.
+                let cached = null;
+                try { cached = localStorage.getItem(SHEET_CACHE_KEY); } catch (e) {}
+
+                if (cached && processCsvContent(cached, true)) {
+                    let when = '';
+                    try {
+                        const ts = localStorage.getItem(SHEET_CACHE_TIME);
+                        if (ts) when = ' from ' + new Date(ts).toLocaleString();
+                    } catch (e) {}
+                    setSyncStatus('stale', 'clock', 'Cached data' + when, reason);
+                } else {
+                    setSyncStatus('stale', 'database', 'Embedded snapshot — not live',
+                        'Showing the built-in snapshot of the sheet. ' + reason);
                 }
             }
-            if (window.lucide) lucide.createIcons();
         }
 
         function parseCsvLine(lineText) {
@@ -1185,19 +3059,27 @@
                     const clicks = cleanNum(cols[clickIdx]);
                     const revenue = cleanNum(cols[revIdx]);
 
+                    const parsedMonth = parseMonthKey(month, year);
+                    const impliedCpc = clicks > 0 ? revenue / clicks : 0;
+
                     parsedData.push({
                         advertiser,
-                        year,
+                        year: parsedMonth ? parsedMonth.year : year,
                         month,
+                        monthKey: parsedMonth ? parsedMonth.key : 0,
+                        monthLabel: parsedMonth ? parsedMonth.label : month,
                         currency: currentCurrency,
                         impressions,
                         clicks,
-                        revenue
+                        revenue,
+                        isOutlier: clicks > 0 && impliedCpc > OUTLIER_CPC_THRESHOLD
                     });
                 }
 
                 if (parsedData.length > 0) {
                     rawData = parsedData;
+                    // Force the growth windows to recompute against the new range
+                    baselineFrom = baselineTo = currentFrom = currentTo = null;
                     populateFilterDropdowns();
                     resetFilters();
                     closeImportModal();
@@ -1247,6 +3129,14 @@
         /* =========================
            UI SETTINGS & INITIALIZATION
         ========================= */
+        // Icons are decorative. A blocked or slow CDN must never stop the
+        // dashboard from rendering data, so every call goes through here.
+        function renderIcons() {
+            if (typeof lucide !== 'undefined' && lucide && lucide.createIcons) {
+                try { lucide.createIcons(); } catch (e) { /* icons only */ }
+            }
+        }
+
         function toggleDarkMode() {
             const isDark = document.documentElement.classList.toggle('dark');
             const themeIcon = document.getElementById('themeIcon');
@@ -1255,14 +3145,40 @@
             } else {
                 themeIcon.setAttribute('data-lucide', 'moon');
             }
-            lucide.createIcons();
+            renderIcons();
             updateTrendChart();
+            updateGrowthAnalysis();
         }
 
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('trendTopNWrap');
+            const panel = document.getElementById('trendClientPanel');
+            if (wrap && panel && !panel.classList.contains('hidden') && !wrap.contains(e.target)) {
+                panel.classList.add('hidden');
+            }
+        });
+
         window.onload = function() {
-            lucide.createIcons();
-            populateFilterDropdowns();
-            applyFilters();
+            renderIcons();
+
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js did not load — tables and KPIs will still work, charts will not.');
+            }
+
+            // Each step is isolated so one failure cannot blank the page.
+            try {
+                // Seed from the embedded snapshot so the dashboard is useful
+                // immediately, before the live sync resolves or fails.
+                processCsvContent(FALLBACK_CSV, true);
+                rawData = normalizeRows(rawData);
+                populateFilterDropdowns();
+                applyFilters();
+            } catch (err) {
+                console.error('Dashboard startup failed:', err);
+                const banner = document.getElementById('sheetSyncStatus');
+                if (banner) banner.innerText = 'Startup error — see console';
+            }
+
             fetchLiveSheetData();
         };
     </script>
