@@ -1,9 +1,20 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50 dark:bg-slate-950">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DV360 Performance & Cost Analytics Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DV360 Performance &amp; Cost Analytics Dashboard</title>
+
+    <!-- Keep this out of search results and AI training crawls. This is a
+         request that compliant crawlers honour, not an access control. -->
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+    <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="bingbot" content="noindex, nofollow, noarchive, nosnippet">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -65,6 +76,12 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+        /* The dark: variant compiles to ".dark <descendant>", so it can never
+           style the <html> element that carries the class. These rules colour
+           the root directly, which also fixes the iOS overscroll gap. */
+        html { background-color: #f7f8fa; }
+        html.dark { background-color: #0d1117; }
+
         body {
             font-family: 'Inter', sans-serif;
             /* Respect the iPhone notch and home indicator */
@@ -112,7 +129,7 @@
         }
     </style>
 </head>
-<body class="h-full text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-300 antialiased transition-colors duration-200">
 
     <div class="min-h-full flex flex-col">
         <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
@@ -269,7 +286,7 @@
                     </div>
                 </div>
 
-                <div class="relative w-full h-80 sm:h-96">
+                <div class="relative w-full h-64 sm:h-80 lg:h-96">
                     <canvas id="trendChart"></canvas>
                 </div>
             </section>
@@ -1365,7 +1382,9 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             const grouped = {};
             
             filteredData.forEach(d => {
-                const key = `${d.year} ${d.month}`;
+                // Month already carries the year (2024/08), so prefixing
+                // d.year produced labels like "2024 2024/08".
+                const key = d.monthLabel || `${d.year} ${d.month}`;
                 if (!grouped[key]) {
                     grouped[key] = {
                         year: d.year,
@@ -1402,8 +1421,8 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                 datasets.push({
                     label: `eCPM (${currentCurrency})`,
                     data: ecpmData,
-                    borderColor: '#0284c7',
-                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                    borderColor: SERIES[0],
+                    backgroundColor: isDark() ? 'rgba(90,169,232,0.12)' : 'rgba(42,124,199,0.10)',
                     borderWidth: 2,
                     tension: 0.3,
                     fill: true,
@@ -1415,8 +1434,8 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                 datasets.push({
                     label: `eCPC (${currentCurrency})`,
                     data: ecpcData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    borderColor: SERIES[2],
+                    backgroundColor: 'rgba(18,133,92,0.05)',
                     borderWidth: 2,
                     tension: 0.3,
                     fill: false,
@@ -1428,8 +1447,8 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                 datasets.push({
                     label: `Spend / Revenue (${currentCurrency})`,
                     data: revData,
-                    borderColor: '#8b5cf6',
-                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    borderColor: SERIES[5],
+                    backgroundColor: isDark() ? 'rgba(157,143,240,0.15)' : 'rgba(74,58,167,0.12)',
                     borderWidth: 2,
                     tension: 0.3,
                     fill: true,
@@ -1454,7 +1473,8 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                         legend: {
                             position: 'top',
                             labels: {
-                                font: { family: 'Inter', size: 12 }
+                                font: { family: 'Inter', size: 12 },
+                                color: INK_MUTED, boxWidth: 10, boxHeight: 10
                             }
                         },
                         tooltip: {
@@ -1467,25 +1487,29 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                     },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { color: INK_MUTED, maxRotation: 45, autoSkip: true }
                         },
                         y: {
                             type: 'linear',
                             display: true,
                             position: 'left',
-                            title: { display: true, text: `eCPM / Primary Value (${currentCurrency})` },
+                            title: { display: true, text: `eCPM / Primary Value (${currentCurrency})`, color: INK_MUTED },
+                            grid: { color: GRID },
                             ticks: {
-                                callback: value => currentCurrency + value
+                                color: INK_MUTED,
+                                callback: value => currentCurrency + Number(value).toFixed(2)
                             }
                         },
                         y1: {
                             type: 'linear',
                             display: focus === 'both',
                             position: 'right',
-                            title: { display: true, text: `eCPC (${currentCurrency})` },
+                            title: { display: true, text: `eCPC (${currentCurrency})`, color: INK_MUTED },
                             grid: { drawOnChartArea: false },
                             ticks: {
-                                callback: value => currentCurrency + value
+                                color: INK_MUTED,
+                                callback: value => currentCurrency + Number(value).toFixed(3)
                             }
                         }
                     }
