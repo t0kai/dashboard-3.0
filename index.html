@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50 dark:bg-slate-900">
+<html lang="en" class="h-full bg-slate-50 dark:bg-slate-950">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,13 +13,42 @@
             theme: {
                 extend: {
                     colors: {
+                        /* Full ramp. The previous config defined only 5 steps
+                           while the markup referenced 10, so brand-200/300/400/
+                           800/900 silently rendered as nothing. */
                         brand: {
-                            50: '#f0f7ff',
-                            100: '#e0effe',
-                            500: '#0284c7',
-                            600: '#0369a1',
-                            700: '#075985',
+                            50:  '#eef6fd',
+                            100: '#d9ebfa',
+                            200: '#b6d8f5',
+                            300: '#84bdec',
+                            400: '#4d9ade',
+                            500: '#2a7cc7',
+                            600: '#1c62a8',
+                            700: '#1a4f88',
+                            800: '#1a4370',
+                            900: '#1a395d',
+                            950: '#11243c'
+                        },
+                        /* Cooler, lower-chroma neutrals. Default slate skews
+                           blue-violet, which reads cheap on large dark areas. */
+                        slate: {
+                            50:  '#f7f8fa',
+                            100: '#eef0f4',
+                            200: '#dfe3e9',
+                            300: '#c5ccd6',
+                            400: '#96a1b0',
+                            500: '#6b7686',
+                            600: '#4c5665',
+                            700: '#2e3844',
+                            800: '#1d2530',
+                            900: '#141a22',
+                            950: '#0d1117'
                         }
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px 0 rgb(0 0 0 / 0.04)',
+                        DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.07)',
+                        lg: '0 8px 24px -6px rgb(0 0 0 / 0.14)'
                     }
                 }
             }
@@ -35,23 +64,51 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
         body {
             font-family: 'Inter', sans-serif;
+            /* Respect the iPhone notch and home indicator */
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
-        /* Custom scrollbar for data tables */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-        }
+
+        /* Tabular figures so columns of numbers line up */
+        .font-mono, table td, table th { font-variant-numeric: tabular-nums; }
+
+        /* Dark surfaces need a light top edge rather than a heavier shadow,
+           otherwise cards read as holes instead of raised panels. */
+        .dark .bg-slate-800 { box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.04); }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb {
-            background: rgba(100, 116, 139, 0.3);
-            border-radius: 3px;
+            background: rgba(107, 118, 134, 0.35);
+            border-radius: 4px;
         }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(100, 116, 139, 0.5);
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 118, 134, 0.55); }
+        .dark ::-webkit-scrollbar-thumb { background: rgba(150, 161, 176, 0.25); }
+        .dark ::-webkit-scrollbar-thumb:hover { background: rgba(150, 161, 176, 0.45); }
+
+        /* Momentum scrolling for the wide tables on touch devices */
+        .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+        /* Comfortable tap targets on touch screens without bloating desktop */
+        @media (hover: none) and (pointer: coarse) {
+            button, select, [role="button"], label.cursor-pointer { min-height: 40px; }
+            input[type="checkbox"] { min-height: 18px; }
+        }
+
+        /* Tables stay readable rather than crushing to unreadable columns */
+        @media (max-width: 640px) {
+            table { min-width: 44rem; }
+            #singleClientBody, #breakdownBody { font-size: 11px; }
+        }
+
+        select, button, input { -webkit-tap-highlight-color: transparent; }
+        :focus-visible { outline: 2px solid #4d9ade; outline-offset: 2px; }
+
+        @media print {
+            header, .no-print { display: none !important; }
         }
     </style>
 </head>
@@ -60,18 +117,18 @@
     <div class="min-h-full flex flex-col">
         <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
+                <div class="flex flex-wrap items-center justify-between gap-y-2 py-2.5 sm:h-16 sm:py-0 sm:flex-nowrap">
                     <div class="flex items-center gap-3">
                         <div class="p-2 bg-brand-600 text-white rounded-lg shadow-sm">
                             <i data-lucide="bar-chart-3" class="w-6 h-6"></i>
                         </div>
                         <div>
-                            <h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">DV360 Analytics Hub</h1>
-                            <p class="text-xs text-slate-500 dark:text-slate-400">Media Cost (Revenue), CPM & CPC Trend Engine</p>
+                            <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">DV360 Analytics Hub</h1>
+                            <p class="hidden sm:block text-xs text-slate-500 dark:text-slate-400">Media Cost (Revenue), CPM &amp; CPC Trend Engine</p>
                         </div>
                     </div>
                     
-                    <div class="flex items-center space-x-3">
+                    <div class="flex items-center gap-2 flex-wrap justify-end">
                         <!-- Live Google Sheet Status Indicator -->
                         <div id="sheetSyncStatus" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             <i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i>
@@ -81,11 +138,11 @@
                         <!-- Data Source Switcher Button -->
                         <button onclick="openImportModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 transition">
                             <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                            <span>Import CSV / Sheet</span>
+                            <span class="hidden sm:inline">Import CSV / Sheet</span><span class="sm:hidden">Import</span>
                         </button>
 
                         <!-- Currency Symbol Badge (Fixed AUD) -->
-                        <div class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                        <div class="hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                             <span class="text-slate-400 font-normal">Currency:</span>
                             <span>AUD (A$)</span>
                         </div>
@@ -99,7 +156,7 @@
             </div>
         </header>
 
-        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
             
             <section class="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
                 <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-3">
@@ -152,28 +209,28 @@
                 </div>
             </section>
 
-            <section class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5 sm:gap-4">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Media Cost</p>
-                    <p id="kpiMedia" class="text-lg font-bold text-slate-900 dark:text-white mt-1">A$0.00</p>
+                    <p id="kpiMedia" class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">A$0.00</p>
                     <span class="text-[10px] text-slate-400">Paid to publishers</span>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p id="kpiRevenueLabel" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Cost</p>
-                    <p id="kpiRevenue" class="text-lg font-bold text-slate-900 dark:text-white mt-1">A$0.00</p>
+                    <p id="kpiRevenue" class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">A$0.00</p>
                     <span id="kpiRevenueSub" class="text-[10px] text-slate-400">Media + DV + FS</span>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Impressions</p>
-                    <p id="kpiImpressions" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0</p>
+                    <p id="kpiImpressions" class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">0</p>
                     <span class="text-[10px] text-slate-400">Delivered Volume</span>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Clicks</p>
-                    <p id="kpiClicks" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0</p>
+                    <p id="kpiClicks" class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">0</p>
                     <span class="text-[10px] text-slate-400">User Engagements</span>
                 </div>
 
@@ -191,7 +248,7 @@
 
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                     <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Avg CTR</p>
-                    <p id="kpiCTR" class="text-lg font-bold text-slate-900 dark:text-white mt-1">0.00%</p>
+                    <p id="kpiCTR" class="text-lg font-bold text-slate-900 dark:text-slate-100 mt-1">0.00%</p>
                     <span class="text-[10px] text-slate-400">Click-Through Rate</span>
                 </div>
             </section>
@@ -199,7 +256,7 @@
             <section class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <i data-lucide="line-chart" class="w-5 h-5 text-brand-600"></i>
                             CPM & CPC Inflation / Time Trend
                         </h3>
@@ -255,11 +312,11 @@
                 </div>
             </section>
 
-            <section class="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-5">
+            <section class="bg-white dark:bg-slate-800 rounded-xl p-3.5 sm:p-5 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4 sm:space-y-5">
                 <div class="border-b border-slate-200 dark:border-slate-700 pb-3">
                     <div class="flex items-center gap-2">
                         <i data-lucide="columns-2" class="w-5 h-5 text-brand-600"></i>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Period-over-Period Side-by-Side Comparison</h3>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-slate-100">Period-over-Period Side-by-Side Comparison</h3>
                     </div>
                     <p class="text-xs text-slate-500 dark:text-slate-400">Compare any specific month against another to measure CPM/CPC variance and ROI shifts (GSMArena style)</p>
                 </div>
@@ -408,7 +465,7 @@
 
                 <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-700 pb-4">
                     <div>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <i data-lucide="trending-up" class="w-5 h-5 text-brand-600"></i>
                             Rate growth since baseline
                         </h3>
@@ -417,25 +474,25 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-end gap-3">
-                        <div>
+                    <div class="grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 sm:gap-3 w-full sm:w-auto">
+                        <div class="col-span-2">
                             <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Client</label>
-                            <select id="growthClient" onchange="handleGrowthClientChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 min-w-[10rem] font-medium"></select>
+                            <select id="growthClient" onchange="handleGrowthClientChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:min-w-[10rem] font-medium"></select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Baseline window</label>
                             <div class="flex items-center gap-1">
-                                <select id="baselineFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <select id="baselineFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto"></select>
                                 <span class="text-xs text-slate-400">to</span>
-                                <select id="baselineTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <select id="baselineTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto"></select>
                             </div>
                         </div>
                         <div>
                             <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">Current window</label>
                             <div class="flex items-center gap-1">
-                                <select id="currentFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <select id="currentFrom" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto"></select>
                                 <span class="text-xs text-slate-400">to</span>
-                                <select id="currentTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5"></select>
+                                <select id="currentTo" onchange="handleWindowChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto"></select>
                             </div>
                         </div>
                         <button onclick="resetWindows()" class="text-xs px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
@@ -454,7 +511,7 @@
                             <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">Cost basis for every rate on this page</p>
                             <p id="costStackNote" class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">--</p>
                         </div>
-                        <select id="costBasis" onchange="handleCostBasisChange()" class="text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5 font-medium flex-shrink-0">
+                        <select id="costBasis" onchange="handleCostBasisChange()" class="text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 font-medium w-full sm:w-auto sm:flex-shrink-0">
                             <option value="totalCost" selected>Total cost (media + DV + FS)</option>
                             <option value="mediaDv">Media + DV360 fee</option>
                             <option value="mediaCost">Media cost only</option>
@@ -539,12 +596,12 @@
                         <div class="space-y-3">
                             <div>
                                 <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">CPM</p>
-                                <p id="lflCpmPct" class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">--</p>
+                                <p id="lflCpmPct" class="text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight">--</p>
                                 <p id="lflCpmAbs" class="text-[11px] text-slate-500 dark:text-slate-400">--</p>
                             </div>
                             <div class="border-t border-brand-200 dark:border-brand-800 pt-3">
                                 <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">CPC</p>
-                                <p id="lflCpcPct" class="text-2xl font-bold text-slate-900 dark:text-white leading-tight">--</p>
+                                <p id="lflCpcPct" class="text-2xl font-bold text-slate-900 dark:text-slate-100 leading-tight">--</p>
                                 <p id="lflCpcAbs" class="text-[11px] text-slate-500 dark:text-slate-400">--</p>
                             </div>
                         </div>
@@ -558,12 +615,12 @@
                             <div class="space-y-2">
                                 <div>
                                     <p class="text-[11px] text-slate-600 dark:text-slate-400">CPM</p>
-                                    <p id="trendCpm" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="trendCpm" class="text-lg font-bold text-slate-900 dark:text-slate-100">--</p>
                                     <p id="trendCpmSub" class="text-[10px] text-slate-500">--</p>
                                 </div>
                                 <div class="border-t border-slate-200 dark:border-slate-700 pt-2">
                                     <p class="text-[11px] text-slate-600 dark:text-slate-400">CPC</p>
-                                    <p id="trendCpc" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="trendCpc" class="text-lg font-bold text-slate-900 dark:text-slate-100">--</p>
                                     <p id="trendCpcSub" class="text-[10px] text-slate-500">--</p>
                                 </div>
                             </div>
@@ -575,12 +632,12 @@
                             <div class="space-y-2">
                                 <div>
                                     <p class="text-[11px] text-slate-600 dark:text-slate-400">CPM</p>
-                                    <p id="blendCpm" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="blendCpm" class="text-lg font-bold text-slate-900 dark:text-slate-100">--</p>
                                     <p id="blendCpmSub" class="text-[10px] text-slate-500">--</p>
                                 </div>
                                 <div class="border-t border-slate-200 dark:border-slate-700 pt-2">
                                     <p class="text-[11px] text-slate-600 dark:text-slate-400">CPC</p>
-                                    <p id="blendCpc" class="text-lg font-bold text-slate-900 dark:text-white">--</p>
+                                    <p id="blendCpc" class="text-lg font-bold text-slate-900 dark:text-slate-100">--</p>
                                     <p id="blendCpcSub" class="text-[10px] text-slate-500">--</p>
                                 </div>
                             </div>
@@ -606,7 +663,7 @@
                         <div class="flex flex-wrap items-end gap-3">
                             <div>
                                 <label class="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">View</label>
-                                <select id="trendView" onchange="handleTrendViewChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5">
+                                <select id="trendView" onchange="handleTrendViewChange()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto">
                                     <option value="combined">All together</option>
                                     <option value="clients">Client by client</option>
                                     <option value="both">Both layered</option>
@@ -620,7 +677,7 @@
                                     <i data-lucide="chevron-down" class="w-3.5 h-3.5 flex-shrink-0"></i>
                                 </button>
 
-                                <div id="trendClientPanel" class="hidden absolute right-0 mt-1 w-80 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-lg z-40 p-3 space-y-2">
+                                <div id="trendClientPanel" class="hidden absolute right-0 mt-1 w-[min(20rem,calc(100vw-2rem))] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-lg z-40 p-3 space-y-2">
                                     <input type="text" id="trendClientSearch" onkeyup="renderTrendClientList()" placeholder="Search clients..." class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5">
 
                                     <div class="flex flex-wrap gap-1.5">
@@ -644,7 +701,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="relative h-80">
+                    <div class="relative h-56 sm:h-72 lg:h-80">
                         <canvas id="growthTrendChart"></canvas>
                     </div>
                 </div>
@@ -687,7 +744,7 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <label class="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Sort</label>
-                            <select id="breakdownSort" onchange="renderClientBreakdown()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-1.5">
+                            <select id="breakdownSort" onchange="renderClientBreakdown()" class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 sm:p-1.5 w-full sm:w-auto">
                                 <option value="cpmPct">CPM change</option>
                                 <option value="cpcPct">CPC change</option>
                                 <option value="revenue" selected>Media cost</option>
@@ -724,7 +781,7 @@
             <section class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden space-y-4 p-5">
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             <i data-lucide="table" class="w-5 h-5 text-brand-600"></i>
                             DV360 Detailed Campaign Log
                         </h3>
@@ -784,7 +841,7 @@
         <div id="importModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
             <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-lg w-full shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
-                    <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h3 class="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <i data-lucide="file-spreadsheet" class="w-5 h-5 text-brand-600"></i> Import DV360 CSV Report
                     </h3>
                     <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -1778,7 +1835,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                         <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500">${label}</span>
                         <span class="text-[10px] font-mono text-slate-400">${(val / total * 100).toFixed(1)}%</span>
                     </div>
-                    <p class="text-sm font-bold text-slate-900 dark:text-white">A$${Math.round(val).toLocaleString()}</p>
+                    <p class="text-sm font-bold text-slate-900 dark:text-slate-100">A$${Math.round(val).toLocaleString()}</p>
                     <div class="h-1 rounded-full mt-1" style="background:${colour}"></div>
                 </div>`;
 
@@ -2097,9 +2154,31 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
            GROWTH ANALYSIS RENDERING
         ========================================================= */
 
-        const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#4a3aa7'];
-        const INK_MUTED = '#898781';
-        const GRID = 'rgba(137,135,129,0.22)';
+        /* Chart.js cannot read CSS variables, so palette values are resolved
+           at draw time via getters. Charts re-render on theme toggle, which is
+           what makes the dark variants actually take effect. */
+        function isDark() {
+            return document.documentElement.classList.contains('dark');
+        }
+
+        const PALETTE = {
+            series: {
+                light: ['#2a7cc7', '#d95f2b', '#12855c', '#b8860b', '#c0587f', '#4a3aa7'],
+                dark:  ['#5aa9e8', '#f08a5d', '#3ecf9a', '#e8b84b', '#e896b4', '#9d8ff0']
+            },
+            ink:  { light: '#6b7686', dark: '#96a1b0' },
+            grid: { light: 'rgba(107,118,134,0.16)', dark: 'rgba(150,161,176,0.14)' }
+        };
+
+        Object.defineProperty(globalThis, 'SERIES', {
+            get: () => PALETTE.series[isDark() ? 'dark' : 'light'], configurable: true
+        });
+        Object.defineProperty(globalThis, 'INK_MUTED', {
+            get: () => PALETTE.ink[isDark() ? 'dark' : 'light'], configurable: true
+        });
+        Object.defineProperty(globalThis, 'GRID', {
+            get: () => PALETTE.grid[isDark() ? 'dark' : 'light'], configurable: true
+        });
 
         function allMonthKeys() {
             return [...new Set(rawData.map(r => r.monthKey))].filter(Boolean).sort((a, b) => a - b);
@@ -2531,7 +2610,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
 
             const shell = (title, icon, body) => `
                 <div class="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-slate-200 dark:border-slate-700">
-                    <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                         <i data-lucide="${icon}" class="w-4 h-4 text-brand-600"></i>${title}
                     </h4>
                     <button onclick="toggleMethodDetail('${key}')" aria-label="Close" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-shrink-0">
@@ -2800,7 +2879,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                 label: combinedName,
                 data: t.values,
                 borderColor: single ? SERIES[0] : INK_MUTED,
-                backgroundColor: single ? 'rgba(42,120,214,0.10)' : 'rgba(137,135,129,0.10)',
+                backgroundColor: single ? 'rgba(90,169,232,0.12)' : (isDark() ? 'rgba(150,161,176,0.10)' : 'rgba(107,118,134,0.10)'),
                 borderWidth: 2,
                 pointRadius: 2,
                 fill: trendView === 'combined',
@@ -2896,7 +2975,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             } else if (trendView === 'both') {
                 const names = trendClients;
                 datasets = [
-                    { ...combinedSet, borderColor: '#0b0b0b', borderWidth: 3, fill: false },
+                    { ...combinedSet, borderColor: isDark() ? '#e8edf4' : '#0d1117', borderWidth: 3, fill: false },
                     trendSet,
                     ...names.map((n, i) => ({
                         label: n,
@@ -2920,7 +2999,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
                 datasets = [
                     {
                         label: `Media only ${label}`, data: media,
-                        borderColor: INK_MUTED, backgroundColor: 'rgba(137,135,129,0.18)',
+                        borderColor: INK_MUTED, backgroundColor: isDark() ? 'rgba(150,161,176,0.16)' : 'rgba(107,118,134,0.16)',
                         borderWidth: 2, pointRadius: 0, fill: 'origin', tension: 0.25
                     },
                     {
