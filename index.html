@@ -16,6 +16,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
+    <!-- Theme is resolved before anything paints: a saved choice wins, then
+         the operating system's preference. Runs ahead of Tailwind so the
+         .dark class is already on <html> when the first styles apply. -->
+    <script>
+        (function () {
+            var saved = null;
+            try { saved = localStorage.getItem('dv360_theme'); } catch (e) {}
+            var dark = saved
+                ? saved === 'dark'
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (dark) document.documentElement.classList.add('dark');
+        })();
+    </script>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -368,11 +382,11 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400">Year</label>
-                                <select id="compYearA" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                                <select id="compYearA" disabled title="Set by the Month choice" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400">Month</label>
-                                <select id="compMonthA" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                                <select id="compMonthA" onchange="syncCompYearToMonth('A');runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
                             </div>
                         </div>
                     </div>
@@ -391,11 +405,11 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400">Year</label>
-                                <select id="compYearB" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                                <select id="compYearB" disabled title="Set by the Month choice" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400">Month</label>
-                                <select id="compMonthB" onchange="runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
+                                <select id="compMonthB" onchange="syncCompYearToMonth('B');runComparison()" class="w-full text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded p-1.5"></select>
                             </div>
                         </div>
                     </div>
@@ -1290,7 +1304,14 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             // Extract unique values
             const advertisers = [...new Set(rawData.map(d => d.advertiser))].sort();
             const years = [...new Set(rawData.map(d => d.year))].sort((a,b) => b - a);
-            const months = [...new Set(rawData.map(d => d.month))].sort((a,b) => (monthOrder[a] || 0) - (monthOrder[b] || 0));
+            // Sheet months arrive as "YYYY/MM" keys, which monthOrder (a month-NAME
+            // lookup) cannot rank — that left this list in raw sheet order.
+            // Sort chronologically, newest first, falling back to the name map.
+            const months = [...new Set(rawData.map(d => d.month))].sort((a, b) => {
+                const ka = /^\d{4}[\/-]\d{1,2}$/.test(a), kb = /^\d{4}[\/-]\d{1,2}$/.test(b);
+                if (ka && kb) return String(b).localeCompare(String(a));
+                return (monthOrder[b] || 0) - (monthOrder[a] || 0);
+            });
 
             // Populate Advertisers
             advSelect.innerHTML = '<option value="ALL">All Advertisers</option>' + 
@@ -1566,19 +1587,19 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             // Peak eCPM
             list.sort((a,b) => b.ecpm - a.ecpm);
             const highestCPM = list[0];
-            document.getElementById('peakCPMText').innerText = `${highestCPM.month} ${highestCPM.year}`;
+            document.getElementById('peakCPMText').innerText = `${highestCPM.month}`;
             document.getElementById('peakCPMSub').innerText = `Peak eCPM: ${formatCurrency(highestCPM.ecpm)}`;
 
             // Peak eCPC
             list.sort((a,b) => b.ecpc - a.ecpc);
             const highestCPC = list[0];
-            document.getElementById('peakCPCText').innerText = `${highestCPC.month} ${highestCPC.year}`;
+            document.getElementById('peakCPCText').innerText = `${highestCPC.month}`;
             document.getElementById('peakCPCSub').innerText = `Peak eCPC: ${formatCurrency(highestCPC.ecpc)}`;
 
             // Lowest eCPM (Best value)
             list.sort((a,b) => a.ecpm - b.ecpm);
             const lowestCPM = list[0];
-            document.getElementById('lowestCPMText').innerText = `${lowestCPM.month} ${lowestCPM.year}`;
+            document.getElementById('lowestCPMText').innerText = `${lowestCPM.month}`;
             document.getElementById('lowestCPMSub').innerText = `Lowest eCPM: ${formatCurrency(lowestCPM.ecpm)}`;
         }
 
@@ -1602,24 +1623,37 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             document.getElementById('compMonthB').innerHTML = mthOpts;
 
             // Set sensible defaults if available
-            if (years.length >= 2) {
-                document.getElementById('compYearA').value = years[1];
-                document.getElementById('compYearB').value = years[0];
-            }
+            // Default to the two most recent months, so the panel shows a real
+            // comparison on load rather than two identical (or empty) periods.
             if (months.length > 0) {
-                document.getElementById('compMonthA').value = months[0];
-                document.getElementById('compMonthB').value = months[0];
+                // months[] is newest-first, so the baseline (A) is the older one.
+                const newest = months[0], prior = months[1] || months[0];
+                document.getElementById('compMonthA').value = prior;
+                document.getElementById('compMonthB').value = newest;
+                syncCompYearToMonth('A');
+                syncCompYearToMonth('B');
             }
 
             runComparison();
         }
 
+        // The Year select is kept only as a readout: it follows whichever month
+        // is chosen, so the two controls can no longer contradict each other.
+        function syncCompYearToMonth(side) {
+            const mth = document.getElementById('compMonth' + side).value;
+            const yr  = String(mth || '').slice(0, 4);
+            const sel = document.getElementById('compYear' + side);
+            if (yr && [...sel.options].some(o => o.value === yr)) sel.value = yr;
+        }
+
         function getAggregateForSelection(adv, year, month) {
             const matches = rawData.filter(d => {
                 const matchAdv = (adv === 'ALL' || d.advertiser === adv);
-                const matchYr = String(d.year) === String(year);
+                // The Month value is a full YYYY/MM key, so it already pins the
+                // year. Testing year separately made every mismatched pair
+                // return zero rows, which is what broke this panel.
                 const matchMth = d.month === month;
-                return matchAdv && matchYr && matchMth;
+                return matchAdv && matchMth;
             });
 
             const totalRev = matches.reduce((acc, c) => acc + c.revenue, 0);
@@ -1652,7 +1686,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             const dataB = getAggregateForSelection(advB, yrB, mthB);
 
             // Populate Card A
-            document.getElementById('compTitleA').innerText = `${dataA.month} ${dataA.year} (${dataA.adv})`;
+            document.getElementById('compTitleA').innerText = `${dataA.month} (${dataA.adv})`;
             document.getElementById('compRevA').innerText = formatCurrency(dataA.revenue);
             document.getElementById('compImpA').innerText = formatNumber(dataA.impressions);
             document.getElementById('compClickA').innerText = formatNumber(dataA.clicks);
@@ -1661,7 +1695,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             document.getElementById('compCtrA').innerText = dataA.ctr.toFixed(2) + '%';
 
             // Populate Card B
-            document.getElementById('compTitleB').innerText = `${dataB.month} ${dataB.year} (${dataB.adv})`;
+            document.getElementById('compTitleB').innerText = `${dataB.month} (${dataB.adv})`;
             document.getElementById('compRevB').innerText = formatCurrency(dataB.revenue);
             document.getElementById('compImpB').innerText = formatNumber(dataB.impressions);
             document.getElementById('compClickB').innerText = formatNumber(dataB.clicks);
@@ -3489,17 +3523,35 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
             }
         }
 
+        // Paints the icon and meta colour to match the current class. Called on
+        // load as well as on toggle, so the button never contradicts the page.
+        function syncThemeChrome() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const themeIcon = document.getElementById('themeIcon');
+            if (themeIcon) themeIcon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+            renderIcons();
+        }
+
         function toggleDarkMode() {
             const isDark = document.documentElement.classList.toggle('dark');
-            const themeIcon = document.getElementById('themeIcon');
-            if (isDark) {
-                themeIcon.setAttribute('data-lucide', 'sun');
-            } else {
-                themeIcon.setAttribute('data-lucide', 'moon');
-            }
-            renderIcons();
+            try { localStorage.setItem('dv360_theme', isDark ? 'dark' : 'light'); } catch (e) {}
+            syncThemeChrome();
             updateTrendChart();
             updateGrowthAnalysis();
+        }
+
+        // Until the viewer picks a side, follow the operating system live.
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+                var saved = null;
+                try { saved = localStorage.getItem('dv360_theme'); } catch (err) {}
+                if (saved) return;
+                document.documentElement.classList.toggle('dark', e.matches);
+                syncThemeChrome();
+                try { updateTrendChart(); updateGrowthAnalysis(); } catch (err) {}
+            });
         }
 
         document.addEventListener('click', (e) => {
@@ -3512,6 +3564,7 @@ We Are Orphan,2024,2024/12,AUD,5332170,17448,"6,831.30",683.1302219,307.4085999,
 
         window.onload = function() {
             renderIcons();
+            syncThemeChrome();
 
             if (typeof Chart === 'undefined') {
                 console.warn('Chart.js did not load — tables and KPIs will still work, charts will not.');

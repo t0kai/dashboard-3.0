@@ -1,11 +1,25 @@
-# DV360 Analytics Hub — internal reporting tool, not for public indexing.
-# This blocks compliant crawlers only. It is not an access control.
+# Search indexing and AI-crawler opt-out are two different things, so this
+# file treats them differently.
+#
+# 1. GENERAL CRAWLERS ARE ALLOWED, on purpose.
+#    The page is kept out of search results by the noindex directive in its
+#    <meta name="robots"> tag and in the X-Robots-Tag response header from
+#    vercel.json. A crawler must FETCH the page to read that directive.
+#    The previous "Disallow: /" blocked the fetch, so crawlers never saw the
+#    noindex -- and a page linked from anywhere could still be listed from
+#    the link alone. Allowing the fetch is what actually keeps it unlisted.
+#
+# 2. AI TRAINING AND DATA CRAWLERS STAY BLOCKED.
+#    These honour robots.txt as their only opt-out, so the Disallow below is
+#    the mechanism that works for them. Keeping them out costs nothing,
+#    because they are not the ones that need to read the noindex.
+#
+# Neither section is access control. Anyone with the URL can open the page.
+# For real restriction, use Vercel password protection or an auth proxy.
 
 User-agent: *
-Disallow: /
+Disallow:
 
-# Named AI/data crawlers. Wildcard above already covers these; they are
-# listed explicitly because some operators honour their own token first.
 User-agent: GPTBot
 Disallow: /
 
