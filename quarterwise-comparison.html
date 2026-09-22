@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Quarter Comparison &mdash; DV360 Analytics Hub</title>
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex, notranslate">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8fa; --card:#ffffff; --line:#dfe3e9; --line2:#eef0f4;
+  --ink:#141a22; --ink2:#4c5665; --ink3:#6b7686; --ink4:#96a1b0;
+  --brand:#1c62a8; --brand2:#2a7cc7; --brand-bg:#eef6fd; --brand-line:#d9ebfa;
+  --up:#b91c1c; --down:#047857; --warn:#b45309; --warn-bg:#fffbeb; --warn-line:#fde68a;
+}
+html.dark{
+  --bg:#0d1117; --card:#1d2530; --line:#2e3844; --line2:#252e3a;
+  --ink:#eef0f4; --ink2:#c5ccd6; --ink3:#96a1b0; --ink4:#6b7686;
+  --brand:#4d9ade; --brand2:#84bdec; --brand-bg:#16283c; --brand-line:#1a4370;
+  --up:#f87171; --down:#4ade80; --warn:#fbbf24; --warn-bg:#2a2313; --warn-line:#4a3a16;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.n{font-variant-numeric:tabular-nums}
+a{color:var(--brand)}
+button,select{font-family:inherit}
+header{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.hrow{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;flex-wrap:wrap;padding:10px 0}
+.logo{width:34px;height:34px;border-radius:8px;background:var(--brand);display:flex;align-items:center;justify-content:center;flex:none}
+h1{font-size:16px;font-weight:700;margin:0;letter-spacing:-.01em}
+.sub{font-size:11px;color:var(--ink3);margin-top:1px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:11px;font-weight:600;
+  border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink2);
+  text-decoration:none;cursor:pointer}
+.pill:hover{background:var(--bg)}
+.dot{width:7px;height:7px;border-radius:99px;flex:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+main{padding:20px 0 40px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.ctl{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px}
+.lbl{display:block;font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.qbtn{padding:9px 17px;font-size:14px;font-weight:500;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);cursor:pointer;min-height:40px}
+.qbtn:hover{border-color:var(--ink4)}
+.qbtn[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+select{font-size:14px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--line);
+  border-radius:8px;padding:10px 32px 10px 12px;cursor:pointer;min-height:40px;appearance:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7686' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+select:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.vr{width:1px;align-self:stretch;background:var(--line)}
+.hist{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line2)}
+.chip{font-size:11px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--brand);color:#fff}
+.chip.off{background:transparent;color:var(--ink4);border:1px solid var(--line);font-weight:500}
+.hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:16px 22px;border-bottom:1px solid var(--line2)}
+.hd h2{font-size:17px;font-weight:700;margin:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:18px 22px}
+.metric{border:1px solid var(--line2);border-radius:10px;padding:16px 18px}
+.mtop{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mname{font-size:15px;font-weight:700}
+.mnote{font-size:11px;color:var(--ink3)}
+.vals{display:flex;align-items:baseline;gap:11px;margin-top:12px;flex-wrap:wrap}
+.v1{font-size:17px;color:var(--ink3)}
+.arw{font-size:14px;color:var(--ink4)}
+.v2{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.chg{font-size:19px;font-weight:700;margin-top:7px}
+.word{font-size:12px;color:var(--ink2);margin-top:3px}
+.fc{margin:0 22px;background:var(--brand-bg);border:1px solid var(--brand-line);border-radius:10px;padding:15px 18px}
+.fct{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--brand)}
+.fcr{display:flex;gap:30px;margin-top:12px;flex-wrap:wrap}
+.fcl{font-size:11px;color:var(--brand);font-weight:600}
+.fcv{font-size:24px;font-weight:700;margin-top:2px}
+.fcs{font-size:12px;color:var(--ink2)}
+.fcx{flex:1;min-width:220px;font-size:11px;color:var(--ink2);line-height:1.6;align-self:center}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);font-weight:600;padding-bottom:8px}
+td{padding:8px 0;border-top:1px solid var(--line2)}
+.tw{padding:18px 22px 20px}
+.empty{padding:38px 22px 34px;text-align:center}
+.eic{width:48px;height:48px;border-radius:99px;background:var(--warn-bg);border:1px solid var(--warn-line);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.et{font-size:19px;font-weight:700}
+.eb{font-size:13px;color:var(--ink2);margin:7px auto 0;max-width:620px;line-height:1.6}
+.eh{font-size:12px;color:var(--ink3);margin-top:13px}
+.foot{font-size:11px;color:var(--ink3);line-height:1.6;margin:4px 2px 0}
+@media (max-width:820px){ .grid2{grid-template-columns:1fr} .vr{display:none} }
+@media (max-width:520px){ .ctl{gap:14px} .v2{font-size:26px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hrow">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="4" width="3" height="14"/></svg>
+      </div>
+      <div>
+        <h1>Quarter Comparison</h1>
+        <div class="sub">Same quarter, one year against another &middot; DV360 Analytics Hub</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="pill" id="sync"><span class="dot" style="background:var(--ink4)"></span><span>Loading&hellip;</span></span>
+      <a class="pill" href="index.html">&larr; Dashboard</a>
+      <button class="pill" id="theme" type="button" aria-label="Toggle dark mode">Dark</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="stack">
+
+    <section class="card">
+      <div class="ctl">
+        <div>
+          <span class="lbl" id="qlbl">1 &middot; Which quarter</span>
+          <div style="display:flex;gap:7px;flex-wrap:wrap" role="group" aria-labelledby="qlbl" id="qbtns"></div>
+        </div>
+        <div class="vr"></div>
+        <div>
+          <label class="lbl" for="yearA">2 &middot; From</label>
+          <select id="yearA"></select>
+        </div>
+        <div style="align-self:center;padding-top:16px;font-size:13px;color:var(--ink3)">to</div>
+        <div>
+          <label class="lbl" for="yearB">3 &middot; To</label>
+          <select id="yearB"></select>
+        </div>
+        <div class="vr"></div>
+        <div style="flex:1;min-width:230px">
+          <label class="lbl" for="adv">4 &middot; Advertiser</label>
+          <select id="adv" style="width:100%;max-width:340px"></select>
+        </div>
+      </div>
+      <div class="hist" id="hist"></div>
+    </section>
+
+    <section class="card">
+      <div class="hd">
+        <h2 id="title">&nbsp;</h2>
+        <div class="n" style="font-size:12px;color:var(--ink3)" id="subtitle">&nbsp;</div>
+      </div>
+      <div id="body"></div>
+    </section>
+
+    <p class="foot" id="foot"></p>
+  </div>
+</main>
+
+<script>
+/* ------------------------------------------------------------------ config */
+var SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSUVMljjeX5V7su-plIxNozz02wNEjdXeUulNH6BzuD4HcqmWcesyNeUuazQ9QP-rALzoI_KH9FxHTH/pub?output=csv";
+var CACHE_KEY = "qc_last_good_csv", CACHE_AT = "qc_last_good_at", THEME_KEY = "qc_theme";
+var ALL = "*";
+
+/* Snapshot of the sheet at build time. Used when the live fetch is blocked
+   (opening the file straight from disk) or the sheet is briefly unreachable,
+   so the page is never blank. */
+var FALLBACK_CSV = "Quarter,Year,Quarter No,Advertiser,Impressions,Clicks,CTR,Media Cost,Fs Cost,DV Cost,Total Cost,CPM,CPC\n2024-Q4,2024,4,ACM,6502478,91903,0.014134,6615.94,297.72,661.59,7575.25,1.165,0.0824\n2024-Q4,2024,4,Affinity,173291,429,0.002476,199.15,8.96,19.91,228.02,1.3158,0.5315\n2024-Q4,2024,4,Avid,2963236,36588,0.012347,3346.91,150.61,334.69,3832.21,1.2933,0.1047\n2024-Q4,2024,4,Fabulate,4017153,12383,0.003083,4634.57,208.56,463.46,5306.59,1.321,0.4285\n2024-Q4,2024,4,Fabulate CPC,1142862,15221,0.013318,1365.12,61.43,136.51,1563.06,1.3677,0.1027\n2024-Q4,2024,4,Man of Many,98620,1803,0.018282,95.56,4.3,9.56,109.41,1.1094,0.0607\n2024-Q4,2024,4,Mediacorp,1891185,85892,0.045417,854.3,38.44,85.43,978.17,0.5172,0.0114\n2024-Q4,2024,4,Pinstripe Media,162551,1192,0.007333,134.5,6.05,13.45,154.01,0.9474,0.1292\n2024-Q4,2024,4,UMCO,72994,1730,0.023701,82.63,3.72,8.26,94.61,1.2962,0.0547\n2024-Q4,2024,4,We Are Explorers,106997,2733,0.025543,104.58,4.71,10.46,119.75,1.1192,0.0438\n2024-Q4,2024,4,We Are Orphan,5332170,17448,0.003272,6831.3,307.41,683.13,7821.84,1.4669,0.4483\n2025-Q1,2025,1,ACM,2029541,54620,0.026912,1295.01,58.28,129.5,1482.78,0.7306,0.0271\n2025-Q1,2025,1,Affinity,2067083,3510,0.001698,2513.17,113.09,251.32,2877.58,1.3921,0.8198\n2025-Q1,2025,1,Audience360,62002,1215,0.019596,41.36,1.86,4.14,47.36,0.7639,0.039\n2025-Q1,2025,1,AusBiz,90277,669,0.007411,96.25,4.33,9.62,110.2,1.2207,0.1647\n2025-Q1,2025,1,Fabulate,1825534,4915,0.002692,1435.94,64.62,143.59,1644.15,0.9006,0.3345\n2025-Q1,2025,1,OSAN Ability,416852,3074,0.007374,310.38,13.97,31.04,355.39,0.8526,0.1156\n2025-Q1,2025,1,Pinstripe Media,15516,164,0.01057,14.29,0.64,1.43,16.37,1.0549,0.0998\n2025-Q1,2025,1,Time Out,58749,987,0.0168,55.85,2.51,5.59,63.95,1.0886,0.0648\n2025-Q2,2025,2,ACBJ,1252501,30402,0.024273,1288.71,57.99,128.87,1475.58,1.1781,0.0485\n2025-Q2,2025,2,ACM,4165842,96067,0.023061,3375.11,151.88,337.51,3864.5,0.9277,0.0402\n2025-Q2,2025,2,Affinity,3569786,23047,0.006456,11498.23,517.42,1149.82,13165.47,3.688,0.5712\n2025-Q2,2025,2,Australian Traveller,73542,2244,0.030513,68.04,3.06,6.8,77.9,1.0593,0.0347\n2025-Q2,2025,2,Demo Account,28267,191,0.006757,40.14,1.81,4.01,45.96,1.6259,0.2406\n2025-Q2,2025,2,Fabulate,532873,1319,0.002475,431.88,19.43,43.19,494.51,0.928,0.3749\n2025-Q2,2025,2,Fabulate CPC,56928,231,0.004058,62.85,2.83,6.29,71.97,1.2642,0.3115\n2025-Q2,2025,2,Furst Media,248889,2321,0.009325,301.27,13.56,30.13,344.96,1.386,0.1486\n2025-Q2,2025,2,Mediacorp,617551,2632,0.004262,1290.77,58.08,129.08,1477.93,2.3932,0.5615\n2025-Q2,2025,2,Newsquest,92163,1472,0.015972,69.37,3.12,6.94,79.42,0.8618,0.054\n2025-Q2,2025,2,Pinstripe Media,706383,9186,0.013004,741.66,33.37,74.17,849.2,1.2022,0.0924\n2025-Q2,2025,2,The Brag,525795,6909,0.01314,765.73,34.46,76.57,876.76,1.6675,0.1269\n2025-Q2,2025,2,Time Out,57938,542,0.009355,48.83,2.2,4.88,55.91,0.965,0.1032\n2025-Q2,2025,2,Urban List,200007,3760,0.018799,245.27,11.04,24.53,280.83,1.4041,0.0747\n2025-Q3,2025,3,ACBJ,404767,8349,0.020627,454.06,20.43,45.41,519.9,1.2844,0.0623\n2025-Q3,2025,3,ACM,4515810,118940,0.026339,3836.33,172.63,383.63,4392.6,0.9727,0.0369\n2025-Q3,2025,3,Affinity,2330907,11157,0.004787,13886.39,624.89,1388.64,15899.91,6.8213,1.4251\n2025-Q3,2025,3,Audience360,400891,7381,0.018411,385.11,17.33,38.51,440.95,1.0999,0.0597\n2025-Q3,2025,3,Australian Traveller,407051,15722,0.038624,361.56,16.27,36.16,413.99,1.017,0.0263\n2025-Q3,2025,3,Demo Account,29825,20,0.000671,101.04,4.55,10.1,115.7,3.8791,5.7848\n2025-Q3,2025,3,Fabulate,746172,2862,0.003836,790.29,35.56,79.03,904.89,1.2127,0.3162\n2025-Q3,2025,3,Fabulate CPC,96201,2739,0.028472,101.35,4.56,10.14,116.05,1.2063,0.0424\n2025-Q3,2025,3,Freethink,158675,3754,0.023658,166.89,7.51,16.69,191.08,1.2042,0.0509\n2025-Q3,2025,3,Mediacorp,1883423,23593,0.012527,3680.55,165.62,368.06,4214.23,2.2375,0.1786\n2025-Q3,2025,3,Newsquest,147940,4511,0.030492,139.08,6.26,13.91,159.25,1.0765,0.0353\n2025-Q3,2025,3,Pinstripe Media,1704710,34037,0.019966,1468.26,66.07,146.83,1681.16,0.9862,0.0494\n2025-Q3,2025,3,The Independent,1673073,35474,0.021203,1709.88,76.94,170.99,1957.82,1.1702,0.0552\n2025-Q3,2025,3,Trip Advisor,4169914,35337,0.008474,3633.03,163.49,363.3,4159.82,0.9976,0.1177\n2025-Q3,2025,3,Urban List,561175,11453,0.020409,698.94,31.45,69.89,800.29,1.4261,0.0699\n2025-Q3,2025,3,We Are Explorers,61822,1647,0.026641,57.51,2.59,5.75,65.85,1.0652,0.04\n2025-Q4,2025,4,ACBJ,1128410,25014,0.022167,1183.46,53.26,118.35,1355.06,1.2009,0.0542\n2025-Q4,2025,4,ACM,5078826,116605,0.022959,4767.96,214.56,476.8,5459.31,1.0749,0.0468\n2025-Q4,2025,4,Affinity,2682745,5667,0.002112,13969.29,628.62,1396.93,15994.83,5.9621,2.8225\n2025-Q4,2025,4,Audience360,1673226,39630,0.023685,1825.12,82.13,182.51,2089.76,1.2489,0.0527\n2025-Q4,2025,4,BAUER MEDIA,151490,2356,0.015552,199.77,8.99,19.98,228.73,1.5099,0.0971\n2025-Q4,2025,4,Benzinga,1458780,29828,0.020447,1609.98,72.45,161.0,1843.43,1.2637,0.0618\n2025-Q4,2025,4,Demo Account,10256,22,0.002145,45.2,2.03,4.52,51.76,5.0465,2.3526\n2025-Q4,2025,4,Drive,1004814,10276,0.010227,1041.43,46.86,104.14,1192.44,1.1867,0.116\n2025-Q4,2025,4,Fabulate,1276987,3980,0.003117,1477.93,66.51,147.79,1692.23,1.3252,0.4252\n2025-Q4,2025,4,FanFinders,150491,2986,0.019842,103.37,4.65,10.34,118.36,0.7865,0.0396\n2025-Q4,2025,4,Freethink,1837,39,0.02123,0.99,0.04,0.1,1.13,0.6173,0.0291\n2025-Q4,2025,4,Furst Media,56477,1180,0.020893,67.3,3.03,6.73,77.06,1.3645,0.0653\n2025-Q4,2025,4,MOTORSPORT,86701,64,0.000738,46.27,2.08,4.63,52.98,0.6111,0.8278\n2025-Q4,2025,4,Mediacorp,6842322,131993,0.019291,5765.95,259.47,576.6,6602.02,0.9649,0.05\n2025-Q4,2025,4,Pinstripe Media,1209167,21836,0.018059,1377.91,62.01,137.79,1577.71,1.3048,0.0723\n2025-Q4,2025,4,The Independent,6251553,126549,0.020243,5791.4,260.61,579.14,6631.15,1.0607,0.0524\n2025-Q4,2025,4,Time Out,415314,8073,0.019438,457.59,20.59,45.76,523.94,1.2615,0.0649\n2026-Q1,2026,1,ACBJ,188027,3246,0.017263,245.07,11.03,24.51,280.6,1.4923,0.0864\n2026-Q1,2026,1,ACM,4317220,81142,0.018795,3997.96,179.91,399.8,4577.67,1.0603,0.0564\n2026-Q1,2026,1,Affinity,2742492,22016,0.008028,6073.06,273.29,607.31,6953.66,2.5355,0.3158\n2026-Q1,2026,1,Audience360,1790946,31625,0.017658,1814.74,81.66,181.47,2077.88,1.1602,0.0657\n2026-Q1,2026,1,Benzinga,664673,17864,0.026876,654.56,29.46,65.46,749.47,1.1276,0.042\n2026-Q1,2026,1,Demo Account,32478,3879,0.119435,35.06,1.58,3.51,40.15,1.2361,0.0103\n2026-Q1,2026,1,Freethink,150182,2970,0.019776,172.05,7.74,17.2,196.99,1.3117,0.0663\n2026-Q1,2026,1,Heyden,15481,29,0.001873,57.05,2.57,5.71,65.33,4.2198,2.2527\n2026-Q1,2026,1,Mediacorp,10158887,150917,0.014856,12437.13,559.67,1243.71,14240.52,1.4018,0.0944\n2026-Q1,2026,1,Newsquest,352623,7532,0.02136,386.39,17.39,38.64,442.41,1.2546,0.0587\n2026-Q1,2026,1,Pinstripe Media,1251127,22190,0.017736,1176.76,52.95,117.68,1347.39,1.0769,0.0607\n2026-Q1,2026,1,SYMPHONICS,2609230,1876,0.000719,7488.36,336.98,748.84,8574.17,3.2861,4.5705\n2026-Q1,2026,1,Symphonics - Revo,592772,162,0.000273,1696.95,76.36,169.69,1943.01,3.2778,11.9939\n2026-Q1,2026,1,The Independent,1700714,36261,0.021321,1637.96,73.71,163.8,1875.47,1.1028,0.0517\n2026-Q1,2026,1,Trip Advisor,29697372,528817,0.017807,37910.63,1705.98,3791.06,43407.67,1.4617,0.0821\n2026-Q2,2026,2,ACBJ,170323,3419,0.020074,166.96,7.51,16.7,191.17,1.1224,0.0559\n2026-Q2,2026,2,ACM,7689318,122332,0.015909,8215.64,369.7,821.56,9406.91,1.2234,0.0769\n2026-Q2,2026,2,Affinity,2654357,13931,0.005248,12430.66,559.38,1243.07,14233.11,5.3622,1.0217\n2026-Q2,2026,2,Audience360,486585,8076,0.016597,512.41,23.06,51.24,586.71,1.2058,0.0726\n2026-Q2,2026,2,Benzinga,618051,9341,0.015114,1466.53,65.99,146.65,1679.18,2.7169,0.1798\n2026-Q2,2026,2,CANDR Media,220846,5655,0.025606,184.88,8.32,18.49,211.68,0.9585,0.0374\n2026-Q2,2026,2,Freethink,6004,311,0.051799,4.25,0.19,0.42,4.87,0.8104,0.0156\n2026-Q2,2026,2,Heyden,2396,7,0.002922,8.64,0.39,0.86,9.9,4.131,1.414\n2026-Q2,2026,2,Mamamia,200709,880,0.004384,241.99,10.89,24.2,277.08,1.3805,0.3149\n2026-Q2,2026,2,Mediacorp,4613857,97230,0.021073,7156.15,322.03,715.61,8193.79,1.7759,0.0843\n2026-Q2,2026,2,Pinstripe Media,2867502,51764,0.018052,3727.07,167.72,372.71,4267.5,1.4882,0.0824\n2026-Q2,2026,2,SYMPHONICS,860421,491,0.000571,2485.53,111.85,248.55,2845.93,3.3076,5.7962\n2026-Q2,2026,2,Symphonics - Revo,773477,68,8.8e-05,2069.34,93.12,206.93,2369.39,3.0633,34.844\n2026-Q2,2026,2,The Independent,384720,8115,0.021093,396.02,17.82,39.6,453.44,1.1786,0.0559\n2026-Q2,2026,2,Trip Advisor,191095,5134,0.026866,188.65,8.49,18.86,216.0,1.1303,0.0421\n2026-Q2,2026,2,We Are Explorers,666943,12966,0.019441,560.11,25.2,56.01,641.32,0.9616,0.0495\n2026-Q3,2026,3,ACBJ,143219,4183,0.029207,153.43,6.9,15.34,175.68,1.2266,0.042\n2026-Q3,2026,3,ACM,6740762,150751,0.022364,6140.75,276.33,614.07,7031.16,1.0431,0.0466\n2026-Q3,2026,3,Affinity,2701727,29993,0.011101,7300.13,328.51,730.01,8358.65,3.0938,0.2787\n2026-Q3,2026,3,Affinity CPC,29738,59,0.001984,36.84,1.66,3.68,42.18,1.4184,0.7149\n2026-Q3,2026,3,Audience360,2080547,44238,0.021263,2139.93,96.3,213.99,2450.22,1.1777,0.0554\n2026-Q3,2026,3,Benzinga,4584859,205465,0.044814,4283.62,192.76,428.36,4904.75,1.0698,0.0239\n2026-Q3,2026,3,Blazeaway Media,78885,973,0.012334,70.87,3.19,7.09,81.15,1.0287,0.0834\n2026-Q3,2026,3,Demo Account,109873,242,0.002203,200.29,9.01,20.03,229.33,2.0873,0.9477\n2026-Q3,2026,3,Freethink,170270,6106,0.035861,171.87,7.73,17.19,196.79,1.1557,0.0322\n2026-Q3,2026,3,Mediacorp,6459645,155975,0.024146,8999.82,404.99,899.98,10304.8,1.5953,0.0661\n2026-Q3,2026,3,Pinstripe Media,1042744,25684,0.024631,1077.98,48.51,107.8,1234.29,1.1837,0.0481\n2026-Q3,2026,3,Symphonics - Revo,319543,40,0.000125,926.19,41.68,92.62,1060.49,3.3188,26.5122\n2026-Q3,2026,3,The Independent,150333,6510,0.043304,116.3,5.23,11.63,133.16,0.8858,0.0205\n2026-Q3,2026,3,Trip Advisor,7937477,206738,0.026046,8510.29,382.96,851.03,9744.28,1.2276,0.0471";
+
+/* ------------------------------------------------------------------- state */
+var DATA = null, QUARTERS = [], ADVERTISERS = [];
+var state = { q: null, ya: null, yb: null, adv: ALL };
+
+/* ------------------------------------------------------------------- utils */
+function ls(k, v) {
+  try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); }
+  catch (e) { return null; }
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+function money(v, dp) {
+  return "A$" + Number(v).toLocaleString("en-AU", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
+function num(v) { return Math.round(v).toLocaleString("en-AU"); }
+function pct(a, b) { return (a === null || b === null || !a) ? null : ((b - a) / a) * 100; }
+function fmtPct(p) { return p === null ? "n/a" : (p >= 0 ? "▲ " : "▼ ") + Math.abs(p).toFixed(1) + "%"; }
+function toNum(s) { var n = parseFloat(String(s == null ? "" : s).replace(/[^0-9.\-]/g, "")); return isFinite(n) ? n : 0; }
+
+function parseCsvLine(line) {
+  var out = [], cur = "", q = false;
+  for (var i = 0; i < line.length; i++) {
+    var c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out.map(function (s) { return s.trim(); });
+}
+
+/* --------------------------------------------------------------- ingestion */
+function buildIndex(csv) {
+  var lines = csv.split(/\r?\n/).filter(function (l) { return l.trim() !== ""; });
+  if (lines.length < 2) throw new Error("The sheet has a header but no rows.");
+  var H = parseCsvLine(lines[0]);
+  function col(re) { return H.findIndex(function (h) { return re.test(h); }); }
+  var iQ = col(/^quarter$/i), iA = col(/advertiser/i), iI = col(/impression/i),
+      iC = col(/^clicks?$/i), iT = col(/total\s*cost/i), iM = col(/media\s*cost/i);
+  if (iQ < 0 || iA < 0 || iI < 0 || (iT < 0 && iM < 0))
+    throw new Error("Missing columns. Need Quarter, Advertiser, Impressions and Total Cost.");
+
+  var D = {};
+  for (var r = 1; r < lines.length; r++) {
+    var c = parseCsvLine(lines[r]);
+    var qk = (c[iQ] || "").trim().toUpperCase().replace(/\s/g, "");
+    var ad = (c[iA] || "").trim();
+    if (!ad || !/^\d{4}-Q[1-4]$/.test(qk)) continue;
+    var imp = toNum(c[iI]), clk = iC < 0 ? 0 : toNum(c[iC]);
+    var tot = iT >= 0 ? toNum(c[iT]) : toNum(c[iM]);
+    if (!D[qk]) D[qk] = {};
+    if (!D[qk][ad]) D[qk][ad] = { imp: 0, clk: 0, tot: 0 };
+    D[qk][ad].imp += imp; D[qk][ad].clk += clk; D[qk][ad].tot += tot;
+  }
+  Object.keys(D).forEach(function (qk) {
+    var t = { imp: 0, clk: 0, tot: 0 };
+    Object.keys(D[qk]).forEach(function (a) {
+      t.imp += D[qk][a].imp; t.clk += D[qk][a].clk; t.tot += D[qk][a].tot;
+    });
+    D[qk][ALL] = t;
+  });
+  if (!Object.keys(D).length) throw new Error("No rows matched. Quarter should look like 2025-Q3.");
+  return D;
+}
+
+function setSync(kind, text) {
+  var col = kind === "ok" ? "var(--down)" : kind === "warn" ? "var(--warn)" : "var(--ink4)";
+  document.getElementById("sync").innerHTML =
+    '<span class="dot" style="background:' + col + '"></span><span>' + esc(text) + "</span>";
+}
+
+function load() {
+  setSync("idle", "Loading…");
+  fetch(SHEET_URL, { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
+    .then(function (t) {
+      if (/^\s*</.test(t)) throw new Error("Got a web page, not CSV.");
+      var D = buildIndex(t);
+      ls(CACHE_KEY, t); ls(CACHE_AT, new Date().toISOString());
+      start(D, "ok", "Live sheet");
+    })
+    .catch(function () {
+      var cached = ls(CACHE_KEY);
+      if (cached) {
+        try {
+          var at = new Date(ls(CACHE_AT)).toLocaleString("en-AU");
+          return start(buildIndex(cached), "warn", "Cached · " + at);
+        } catch (e) { /* fall through to the built-in copy */ }
+      }
+      start(buildIndex(FALLBACK_CSV), "warn", "Built-in copy");
+    });
+}
+
+/* ------------------------------------------------------------------ derive */
+function yearsFor(q) {
+  return QUARTERS.filter(function (k) { return k.split("-")[1] === q; })
+    .map(function (k) { return parseInt(k.slice(0, 4), 10); })
+    .sort(function (a, b) { return a - b; });
+}
+function get(year, q, adv) {
+  var row = DATA[year + "-" + q];
+  return row && row[adv] ? row[adv] : null;
+}
+function rates(x) {
+  return {
+    cpm: x.imp ? x.tot / x.imp * 1000 : null,
+    cpc: x.clk ? x.tot / x.clk : null
+  };
+}
+
+/* ------------------------------------------------------------------ render */
+function renderControls() {
+  var qs = ["Q1", "Q2", "Q3", "Q4"];
+  document.getElementById("qbtns").innerHTML = qs.map(function (k) {
+    var has = yearsFor(k).length > 0;
+    return '<button type="button" class="qbtn" data-q="' + k + '" aria-pressed="' +
+      (k === state.q) + '"' + (has ? "" : " disabled title=\"No data\"") + ">" + k + "</button>";
+  }).join("");
+
+  var ys = yearsFor(state.q);
+  function opts(sel) {
+    return ys.map(function (y) {
+      return '<option value="' + y + '"' + (y === sel ? " selected" : "") + ">" + y + "</option>";
+    }).join("");
+  }
+  document.getElementById("yearA").innerHTML = opts(state.ya);
+  document.getElementById("yearB").innerHTML = opts(state.yb);
+
+  document.getElementById("adv").innerHTML =
+    '<option value="' + ALL + '"' + (state.adv === ALL ? " selected" : "") + ">All advertisers</option>" +
+    ADVERTISERS.map(function (a) {
+      return '<option value="' + esc(a) + '"' + (a === state.adv ? " selected" : "") + ">" + esc(a) + "</option>";
+    }).join("");
+
+  var ran = 0;
+  var chips = QUARTERS.map(function (k) {
+    var has = !!(DATA[k] && DATA[k][state.adv]);
+    if (has) ran++;
+    return '<span class="chip' + (has ? "" : " off") + '">' + k + "</span>";
+  }).join("");
+  var who = state.adv === ALL ? "" : esc(state.adv) + " ";
+  var note = state.adv === ALL
+    ? ADVERTISERS.length + " advertisers across " + QUARTERS.length + " quarters"
+    : ran + " of " + QUARTERS.length + (ran === QUARTERS.length ? " — no gaps" : " — grey means no campaigns");
+  document.getElementById("hist").innerHTML =
+    '<span style="font-size:11px;font-weight:700;color:var(--ink2)">Quarters ' + who + "ran in:</span>" +
+    chips + '<span style="font-size:11px;color:var(--ink3)">' + note + "</span>";
+}
+
+function renderResult() {
+  var q = state.q, ya = state.ya, yb = state.yb, adv = state.adv;
+  var who = adv === ALL ? "All advertisers" : adv;
+  var ka = ya + "-" + q, kb = yb + "-" + q;
+  var A = get(ya, q, adv), B = get(yb, q, adv);
+
+  document.getElementById("title").textContent = q + " — " + ya + " vs " + yb + "  ·  " + who;
+  document.getElementById("subtitle").textContent = ka + "  →  " + kb;
+
+  if (!A || !B || ya === yb) {
+    var t, b, h = "";
+    if (ya === yb) {
+      t = "Pick two different years";
+      b = "Both menus are on " + ya + ". Choose a different year in one of them.";
+    } else if (!A && !B) {
+      t = "No campaigns";
+      b = who + " had no campaigns in " + ka + " or " + kb + ".";
+      h = adv === ALL ? "" : "The quarters " + adv + " did run in are marked above.";
+    } else if (!A) {
+      t = "No campaigns in " + ka;
+      b = who + " had no campaigns in " + ka + ", so there is nothing to compare " + kb + " against.";
+      h = "Pick another year in the From menu, or one of the marked quarters above.";
+    } else {
+      t = "No campaigns in " + kb;
+      b = who + " ran in " + ka + " but had no campaigns in " + kb + ".";
+      h = "Pick another year in the To menu, or one of the marked quarters above.";
+    }
+    document.getElementById("body").innerHTML =
+      '<div class="empty"><div class="eic">' +
+      '<svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 15l6 6M15 15l-6 6"/></svg>' +
+      '</div><div class="et">' + esc(t) + '</div><div class="eb">' + esc(b) + "</div>" +
+      (h ? '<div class="eh">' + esc(h) + "</div>" : "") + "</div>";
+    return;
+  }
+
+  var ra = rates(A), rb = rates(B);
+  var dCpm = pct(ra.cpm, rb.cpm), dCpc = pct(ra.cpc, rb.cpc);
+
+  function block(name, note, va, vb, d, label) {
+    var col = d === null ? "var(--ink3)" : (d >= 0 ? "var(--up)" : "var(--down)");
+    var word = d === null
+      ? label + " cannot be compared — no clicks in one of the quarters"
+      : label + (d >= 0 ? " increased " : " decreased ") + Math.abs(d).toFixed(1) + "% from " + ya + " to " + yb;
+    return '<div class="metric"><div class="mtop"><span class="mname">' + name +
+      '</span><span class="mnote">' + note + '</span></div><div class="vals n">' +
+      '<span class="v1">' + va + '</span><span class="arw">→</span><span class="v2">' + vb + "</span></div>" +
+      '<div class="chg n" style="color:' + col + '">' + fmtPct(d) + "</div>" +
+      '<div class="word">' + esc(word) + "</div></div>";
+  }
+
+  var fcCpm = dCpm === null ? "—" : money(rb.cpm * (1 + dCpm / 100), 4);
+  var fcCpc = (dCpc === null || rb.cpc === null) ? "—" : money(rb.cpc * (1 + dCpc / 100), 4);
+
+  function row(lbl, a, b, d) {
+    return "<tr><td style=\"color:var(--ink2)\">" + lbl + '</td><td class="n" style="text-align:right">' + a +
+      '</td><td class="n" style="text-align:right">' + b +
+      '</td><td class="n" style="text-align:right;font-weight:600">' + fmtPct(d) + "</td></tr>";
+  }
+
+  document.getElementById("body").innerHTML =
+    '<div class="grid2">' +
+      block("CPM", "cost per 1,000 impressions", money(ra.cpm, 4), money(rb.cpm, 4), dCpm, "CPM") +
+      block("CPC", "cost per click",
+            ra.cpc === null ? "—" : money(ra.cpc, 4),
+            rb.cpc === null ? "—" : money(rb.cpc, 4), dCpc, "CPC") +
+    "</div>" +
+    '<div class="fc"><div class="fct">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>' +
+      "If the same change repeats next year — " + (yb + 1) + "-" + q + "</div>" +
+      '<div class="fcr">' +
+        '<div><div class="fcl">Projected CPM</div><div class="fcv n">' + fcCpm +
+          '</div><div class="fcs n">' + fmtPct(dCpm) + " again</div></div>" +
+        '<div><div class="fcl">Projected CPC</div><div class="fcv n">' + fcCpc +
+          '</div><div class="fcs n">' + fmtPct(dCpc) + " again</div></div>" +
+        '<div class="fcx">This carries the year-on-year percentage straight forward &mdash; the simplest possible ' +
+          "forecast. It assumes next year moves like this year did, which it may not.</div>" +
+      "</div></div>" +
+    '<div class="tw"><table><thead><tr>' +
+      '<th style="text-align:left">Underlying figures</th>' +
+      '<th style="text-align:right">' + ka + "</th>" +
+      '<th style="text-align:right">' + kb + "</th>" +
+      '<th style="text-align:right">Change</th></tr></thead><tbody>' +
+      row("Impressions", num(A.imp), num(B.imp), pct(A.imp, B.imp)) +
+      row("Clicks", num(A.clk), num(B.clk), pct(A.clk, B.clk)) +
+      row("Total cost", money(A.tot, 2), money(B.tot, 2), pct(A.tot, B.tot)) +
+    "</tbody></table></div>";
+}
+
+function render() {
+  try { renderControls(); } catch (e) { console.error("controls:", e); }
+  try { renderResult(); } catch (e) { console.error("result:", e); }
+}
+
+/* -------------------------------------------------------------------- boot */
+function start(D, kind, msg) {
+  DATA = D;
+  QUARTERS = Object.keys(D).sort();
+  var seen = {};
+  QUARTERS.forEach(function (k) {
+    Object.keys(D[k]).forEach(function (a) { if (a !== ALL) seen[a] = 1; });
+  });
+  ADVERTISERS = Object.keys(seen).sort(function (a, b) { return a.localeCompare(b); });
+
+  var last = QUARTERS[QUARTERS.length - 1];
+  state.q = last.split("-")[1];
+  var ys = yearsFor(state.q);
+  state.ya = ys.length > 1 ? ys[ys.length - 2] : ys[0];
+  state.yb = ys[ys.length - 1];
+  state.adv = ALL;
+
+  setSync(kind, msg);
+  document.getElementById("foot").textContent =
+    QUARTERS.length + " quarters (" + QUARTERS[0] + " to " + last + "), " + ADVERTISERS.length +
+    " advertisers. CPM and CPC are recalculated from total cost, impressions and clicks, so the " +
+    "All advertisers figure is a true blended rate rather than an average of rates.";
+  render();
+}
+
+document.getElementById("qbtns").addEventListener("click", function (e) {
+  var b = e.target.closest("button[data-q]");
+  if (!b || b.disabled) return;
+  state.q = b.dataset.q;
+  var ys = yearsFor(state.q);
+  state.ya = ys.length > 1 ? ys[ys.length - 2] : ys[0];
+  state.yb = ys[ys.length - 1];
+  render();
+});
+document.getElementById("yearA").addEventListener("change", function (e) {
+  state.ya = parseInt(e.target.value, 10); render();
+});
+document.getElementById("yearB").addEventListener("change", function (e) {
+  state.yb = parseInt(e.target.value, 10); render();
+});
+document.getElementById("adv").addEventListener("change", function (e) {
+  state.adv = e.target.value; render();
+});
+
+(function theme() {
+  var btn = document.getElementById("theme");
+  function apply(d) {
+    document.documentElement.classList.toggle("dark", d);
+    btn.textContent = d ? "Light" : "Dark";
+  }
+  var saved = ls(THEME_KEY);
+  apply(saved ? saved === "dark"
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  btn.addEventListener("click", function () {
+    var d = !document.documentElement.classList.contains("dark");
+    ls(THEME_KEY, d ? "dark" : "light");
+    apply(d);
+  });
+})();
+
+load();
+</script>
+</body>
+</html>
